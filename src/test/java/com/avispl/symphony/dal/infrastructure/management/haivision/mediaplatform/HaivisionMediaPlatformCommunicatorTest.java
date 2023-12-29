@@ -49,7 +49,7 @@ public class HaivisionMediaPlatformCommunicatorTest {
 
 	@Test
 	void testGetAggregatorData() throws Exception {
-		haivisionMediaPlatformCommunicator.setFilterDeviceType("Play 2000, Play 2000B");
+		haivisionMediaPlatformCommunicator.setFilterByDeviceType("Play 2000, Play 2000B");
 		extendedStatistic = (ExtendedStatistics) haivisionMediaPlatformCommunicator.getMultipleStatistics().get(0);
 		Map<String, String> statistics = extendedStatistic.getStatistics();
 		List<AdvancedControllableProperty> advancedControllablePropertyList = extendedStatistic.getControllableProperties();

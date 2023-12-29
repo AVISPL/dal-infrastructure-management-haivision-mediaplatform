@@ -5,27 +5,28 @@
 package com.avispl.symphony.dal.infrastructure.management.haivision.mediaplatform.common;
 
 /**
- * Enum representing system information fields in the Haivision Media Platform API.
+ * Enum representing different types of channels.
  *
  * @author Harry / Symphony Dev Team<br>
- * Created on 9/8/2023
+ * Created on 12/27/2023
  * @since 1.0.0
  */
-public enum SystemInfo {
-	VERSION("Version", "version"),
-	BUILD("Build", "build"),
-	NUMBER_OF_DEVICES("NumberOfDevices", "numResults"),
+public enum ChannelTypeEnum {
+	PLAY_1000("Channel", "source"),
+	PLAY_2000_A("Videos", "asset"),
+	PLAY_2000_B("Sessions", "session"),
+	PLAY_4000("Layouts", "composition"),
 	;
 	private final String name;
 	private final String value;
 
 	/**
-	 * Constructor for SystemInfo.
+	 * Constructor for ChannelTypeEnum.
 	 *
-	 * @param name The name representing the system information category.
-	 * @param value The corresponding value associated with the category.
+	 * @param name  The name representing the interval.
+	 * @param value The numeric value representing the interval.
 	 */
-	SystemInfo(String name, String value) {
+	ChannelTypeEnum(String name, String value) {
 		this.name = name;
 		this.value = value;
 	}
