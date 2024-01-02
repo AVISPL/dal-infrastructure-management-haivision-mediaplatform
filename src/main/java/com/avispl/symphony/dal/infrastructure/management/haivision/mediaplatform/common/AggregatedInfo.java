@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2023 AVI-SPL, Inc. All Rights Reserved.
+ *  Copyright (c) 2024 AVI-SPL, Inc. All Rights Reserved.
  */
 
 package com.avispl.symphony.dal.infrastructure.management.haivision.mediaplatform.common;
@@ -18,6 +18,9 @@ public enum AggregatedInfo {
 	FIRMWARE("Firmware"),
 	IPADDRESS("IPAddress"),
 	MAC_ADDRESS("MACAddress"),
+	NTP_SERVER("NTPServer"),
+	EXTENSION("Extension"),
+	STATUS_DETAILS("StatusDetails"),
 	LAST_CONNECT_AT("LastConnectedAt"),
 	LAST_ACCEPTED_UPDATE("LastAcceptedUpdate"),
 	HOSTNAME("Hostname"),

@@ -23,6 +23,9 @@ models:
         Standby: get("standby")
         Volume(%): get("volume")
         Status: get("status")
+        NTPServer: get("ntpServer")
+        Extension: get("hvExtensionSize")
+        StatusDetails: get("statusDetails")
 
 
 

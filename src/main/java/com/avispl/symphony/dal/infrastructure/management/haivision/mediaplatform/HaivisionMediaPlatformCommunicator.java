@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2023 AVI-SPL, Inc. All Rights Reserved.
+ *  Copyright (c) 2024 AVI-SPL, Inc. All Rights Reserved.
  */
 
 package com.avispl.symphony.dal.infrastructure.management.haivision.mediaplatform;
@@ -17,6 +17,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -30,6 +31,7 @@ import org.springframework.util.CollectionUtils;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import javax.security.auth.login.FailedLoginException;
 
 import com.avispl.symphony.api.dal.control.Controller;
@@ -38,6 +40,7 @@ import com.avispl.symphony.api.dal.dto.control.ControllableProperty;
 import com.avispl.symphony.api.dal.dto.monitor.ExtendedStatistics;
 import com.avispl.symphony.api.dal.dto.monitor.Statistics;
 import com.avispl.symphony.api.dal.dto.monitor.aggregator.AggregatedDevice;
+import com.avispl.symphony.api.dal.error.CommandFailureException;
 import com.avispl.symphony.api.dal.error.ResourceNotReachableException;
 import com.avispl.symphony.api.dal.monitor.Monitorable;
 import com.avispl.symphony.api.dal.monitor.aggregator.Aggregator;
@@ -378,7 +381,107 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 	 */
 	@Override
 	public void controlProperty(ControllableProperty controllableProperty) throws Exception {
+		String property = controllableProperty.getProperty();
+		String deviceId = controllableProperty.getDeviceId();
+		String value = String.valueOf(controllableProperty.getValue());
 
+		String[] propertyList = property.split(HaivisionMediaPlatformConstant.HASH);
+		String propertyName = property;
+		if (property.contains(HaivisionMediaPlatformConstant.HASH)) {
+			propertyName = propertyList[1];
+		}
+		reentrantLock.lock();
+		try {
+			Optional<AggregatedDevice> aggregatedDevice = aggregatedDeviceList.stream().filter(item -> item.getDeviceId().equals(deviceId)).findFirst();
+			if (aggregatedDevice.isPresent()) {
+				Map<String, String> stats = aggregatedDevice.get().getProperties();
+				List<AdvancedControllableProperty> advancedControllableProperties = aggregatedDevice.get().getControllableProperties();
+				boolean controlPropagated = true;
+				ObjectNode body = objectMapper.createObjectNode();
+				AggregatedInfo propertyItem = AggregatedInfo.getByName(propertyName);
+				switch (propertyItem) {
+					case MUTE:
+						String commandValue = "unmute";
+						if (HaivisionMediaPlatformConstant.NUMBER_ONE.equals(value)) {
+							commandValue = "mute";
+						}
+						body.put(HaivisionMediaPlatformConstant.COMMAND, commandValue);
+						sendSTBCommandToDevice(deviceId, body, propertyName, getSwitchStatus(value));
+						break;
+					case STANDBY:
+						commandValue = "standby-off";
+						if (HaivisionMediaPlatformConstant.NUMBER_ONE.equals(value)) {
+							commandValue = "standby-on";
+						}
+						body.put(HaivisionMediaPlatformConstant.COMMAND, commandValue);
+						sendSTBCommandToDevice(deviceId, body, propertyName, getSwitchStatus(value));
+						break;
+					case VOLUME:
+						double newValue = Double.parseDouble(value) / 100.0;
+						body.put(HaivisionMediaPlatformConstant.COMMAND, "set-volume");
+						ObjectNode childNode = objectMapper.createObjectNode();
+						childNode.put(HaivisionMediaPlatformConstant.VOLUME, newValue);
+						body.set(HaivisionMediaPlatformConstant.PARAMETERS, childNode);
+						sendSTBCommandToDevice(deviceId, body, propertyName, value);
+						stats.put(HaivisionMediaPlatformConstant.VOLUME_CURRENT_VALUE, value);
+						break;
+					case REBOOT:
+						commandValue = "reboot";
+						body.put(HaivisionMediaPlatformConstant.COMMAND, commandValue);
+						sendSTBCommandToDevice(deviceId, body, propertyName, HaivisionMediaPlatformConstant.EMPTY);
+						break;
+					case CONTENT_TYPE:
+						if (HaivisionMediaPlatformConstant.NONE.equals(value)) {
+							throw new IllegalArgumentException("Please choose the valid value");
+						}
+						List<String> namesWithMatchingType = contentValues.stream().filter(content -> content.getType().equals(EnumTypeHandler.getValueByName(ChannelTypeEnum.class, value)))
+								.map(Content::getName).collect(Collectors.toList());
+						addAdvanceControlProperties(advancedControllableProperties, stats,
+								createDropdown(HaivisionMediaPlatformConstant.CONTENT_GROUP + AggregatedInfo.CONTENT_SOURCE.getName(), namesWithMatchingType.toArray(new String[0]), namesWithMatchingType.get(0)),
+								namesWithMatchingType.get(0));
+						putValueIntoMap(deviceId, AggregatedInfo.CONTENT_TYPE.getName(), EnumTypeHandler.getValueByName(ChannelTypeEnum.class, value));
+						putValueIntoMap(deviceId, AggregatedInfo.CONTENT_SOURCE.getName(), namesWithMatchingType.get(0));
+						break;
+					case CONTENT_SOURCE:
+						putValueIntoMap(deviceId, AggregatedInfo.CONTENT_SOURCE.getName(), value);
+						break;
+					case APPLY_CHANGE:
+						String name = cachedContentValue.get(deviceId).get(AggregatedInfo.CONTENT_SOURCE.getName());
+						String type = cachedContentValue.get(deviceId).get(AggregatedInfo.CONTENT_TYPE.getName());
+						Optional<String> foundId = contentValues.stream()
+								.filter(content -> content.getName().equals(name) && content.getType().equals(type))
+								.map(Content::getId).findFirst();
+						if (foundId.isPresent()) {
+							body.put(HaivisionMediaPlatformConstant.COMMAND, "set-channel");
+							childNode = objectMapper.createObjectNode();
+							childNode.put(HaivisionMediaPlatformConstant.ID, foundId.get());
+							childNode.put(HaivisionMediaPlatformConstant.NAME, name);
+							childNode.put(HaivisionMediaPlatformConstant.TYPE, type);
+							body.set(HaivisionMediaPlatformConstant.PARAMETERS, childNode);
+							//Send command
+							sendSTBCommandToDevice(deviceId, body, propertyName, HaivisionMediaPlatformConstant.EMPTY);
+						} else {
+							throw new IllegalArgumentException(String.format("Error when control Content with type is %s and source is %s", EnumTypeHandler.getNameByValue(ChannelTypeEnum.class, type), name));
+						}
+						break;
+					default:
+						if (logger.isWarnEnabled()) {
+							logger.warn(String.format("Unable to execute %s command on device %s: Not Supported", property, deviceId));
+						}
+						controlPropagated = false;
+						break;
+				}
+				if (controlPropagated) {
+					checkControl = true;
+					updateLocalControlValue(stats, advancedControllableProperties, property, value);
+					updateListAggregatedDevice(deviceId, stats, advancedControllableProperties);
+				}
+			} else {
+				throw new IllegalArgumentException(String.format("Unable to control property: %s as the device does not exist.", property));
+			}
+		} finally {
+			reentrantLock.unlock();
+		}
 	}
 
 	/**
@@ -731,11 +834,11 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 			value = getDefaultValueForNullData(mappingStatistic.get(propertyName));
 			switch (item) {
 				case REBOOT:
-					addAdvanceControlProperties(advancedControllableProperties, stats, createButton(propertyName, "Reboot", "Rebooting", HaivisionMediaPlatformConstant.GRACE_PERIOD),
+					addAdvanceControlProperties(advancedControllableProperties, stats, createButton(propertyName, HaivisionMediaPlatformConstant.REBOOT, HaivisionMediaPlatformConstant.REBOOTING, HaivisionMediaPlatformConstant.GRACE_PERIOD),
 							HaivisionMediaPlatformConstant.NONE);
 					break;
 				case APPLY_CHANGE:
-					addAdvanceControlProperties(advancedControllableProperties, stats, createButton("Content#ApplyChange", "Save", "Saving", HaivisionMediaPlatformConstant.GRACE_PERIOD),
+					addAdvanceControlProperties(advancedControllableProperties, stats, createButton(HaivisionMediaPlatformConstant.CONTENT_GROUP + AggregatedInfo.APPLY_CHANGE.getName(), HaivisionMediaPlatformConstant.SAVE, HaivisionMediaPlatformConstant.SAVING, HaivisionMediaPlatformConstant.GRACE_PERIOD),
 							HaivisionMediaPlatformConstant.NONE);
 					break;
 				case VOLUME:
@@ -792,6 +895,35 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 	}
 
 	/**
+	 * Sends a command to the set-top box (STB) device.
+	 *
+	 * @param deviceId The ID of the target device
+	 * @param body The JSON body of the command to be sent
+	 * @param name The name of the property being controlled
+	 * @param value The value to set for the specified property
+	 * @throws IllegalArgumentException If an issue occurs while sending the command or handling the response
+	 */
+	private void sendSTBCommandToDevice(String deviceId, JsonNode body, String name, String value) {
+		try {
+			String command = String.format(HaivisionMediaPlatformCommand.STB_COMMAND, deviceId);
+			JsonNode response = this.doPost(command, body, JsonNode.class);
+			if (response == null) {
+				throw new IllegalArgumentException("The response is empty");
+			}
+		} catch (CommandFailureException ex) {
+			if (ex.getMessage() != null && ex.getMessage().contains("Device stream not found")) {
+				throw new IllegalArgumentException(String.format("Can't control property %s with value %s. The device must be online and connected (status Online or Standby)", name, value), ex);
+			} else if (ex.getMessage() != null && ex.getMessage().contains("Device not found")) {
+				throw new IllegalArgumentException(String.format("Can't control property %s with value %s. Unknown device ID.", name, value), ex);
+			} else {
+				throw new IllegalArgumentException(String.format("Can't control property %s with value %s", name, value), ex);
+			}
+		} catch (Exception e) {
+			throw new IllegalArgumentException(String.format("Can't control property %s with value %s", name, value), e);
+		}
+	}
+
+	/**
 	 * Puts a value into the cached content value map for a specific device and property.
 	 *
 	 * @param deviceId The unique identifier of the device.
@@ -805,6 +937,16 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 		}
 		contentValue.put(propertyName, value);
 		cachedContentValue.put(deviceId, contentValue);
+	}
+
+	/**
+	 * Gets the status of a switch based on the provided value.
+	 *
+	 * @param value The value indicating the switch status
+	 * @return The status of the switch (either "ON" or "OFF")
+	 */
+	private String getSwitchStatus(String value) {
+		return HaivisionMediaPlatformConstant.NUMBER_ONE.equals(value) ? HaivisionMediaPlatformConstant.ON : HaivisionMediaPlatformConstant.OFF;
 	}
 
 	/**
@@ -848,6 +990,39 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 	private String uppercaseFirstCharacter(String input) {
 		char firstChar = input.charAt(0);
 		return Character.toUpperCase(firstChar) + input.substring(1);
+	}
+
+	/**
+	 * Updates cached devices' control value, after the control command was executed with the specified value.
+	 * It is done in order for aggregator to populate the latest control values, after the control command has been executed,
+	 * but before the next devices details polling cycle was addressed.
+	 *
+	 * @param stats The updated device properties.
+	 * @param advancedControllableProperties The updated list of advanced controllable properties.
+	 * @param name of the control property
+	 * @param value to set to the control property
+	 */
+	private void updateLocalControlValue(Map<String, String> stats, List<AdvancedControllableProperty> advancedControllableProperties, String name, String value) {
+		stats.put(name, value);
+		advancedControllableProperties.stream().filter(advancedControllableProperty ->
+				name.equals(advancedControllableProperty.getName())).findFirst().ifPresent(advancedControllableProperty ->
+				advancedControllableProperty.setValue(value));
+	}
+
+	/**
+	 * Updates the properties and controllable properties of an aggregated device in the list.
+	 *
+	 * @param deviceId The unique identifier of the device to update.
+	 * @param stats The updated device properties.
+	 * @param advancedControllableProperties The updated list of advanced controllable properties.
+	 */
+	private void updateListAggregatedDevice(String deviceId, Map<String, String> stats, List<AdvancedControllableProperty> advancedControllableProperties) {
+		Optional<AggregatedDevice> device = aggregatedDeviceList.stream().filter(aggregatedDevice ->
+				deviceId.equals(aggregatedDevice.getDeviceId())).findFirst();
+		if (device.isPresent()) {
+			device.get().setControllableProperties(advancedControllableProperties);
+			device.get().setProperties(stats);
+		}
 	}
 
 	/**

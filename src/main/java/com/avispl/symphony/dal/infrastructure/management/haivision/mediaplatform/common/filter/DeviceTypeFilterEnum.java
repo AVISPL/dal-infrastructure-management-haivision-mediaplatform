@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2023 AVI-SPL, Inc. All Rights Reserved.
+ *  Copyright (c) 2024 AVI-SPL, Inc. All Rights Reserved.
  */
 
 package com.avispl.symphony.dal.infrastructure.management.haivision.mediaplatform.common.filter;
