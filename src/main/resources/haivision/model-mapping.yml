@@ -6,7 +6,7 @@ models:
       mapping:
         deviceId: get("_id")
         deviceModel: get("type")
-        deviceOnline: get("status").asText().equals("Online")
+        deviceOnline: get("status").asText().equalsIgnoreCase("Online")
         deviceName: get("name")
       properties:
         Firmware: get("firmware")
@@ -26,6 +26,3 @@ models:
         NTPServer: get("ntpServer")
         Extension: get("hvExtensionSize")
         StatusDetails: get("statusDetails")
-
-
-

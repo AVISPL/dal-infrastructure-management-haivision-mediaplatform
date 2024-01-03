@@ -58,7 +58,51 @@ import com.avispl.symphony.dal.infrastructure.management.haivision.mediaplatform
 import com.avispl.symphony.dal.infrastructure.management.haivision.mediaplatform.common.filter.DeviceTypeFilterEnum;
 import com.avispl.symphony.dal.util.StringUtils;
 
-
+/**
+ * HaivisionMediaPlatformCommunicator
+ * Supported features are:
+ * Monitoring Aggregator Device:
+ *  <ul>
+ *  <li> - Build</li>
+ *  <li> - NumberOfDevices</li>
+ *  <li> - Version</li>
+ *  <ul>
+ *
+ * General Info Aggregated Device:
+ * <ul>
+ * <li> - deviceId</li>
+ * <li> - deviceModel</li>
+ * <li> - deviceName</li>
+ * <li> - deviceOnline</li>
+ * <li> - Extension</li>
+ * <li> - Firmware</li>
+ * <li> - Hostname</li>
+ * <li> - IPAddress</li>
+ * <li> - LastAcceptedUpdate</li>
+ * <li> - LastConnectedAt</li>
+ * <li> - MACAddress</li>
+ * <li> - Mute</li>
+ * <li> - NTPServer</li>
+ * <li> - Reboot</li>
+ * <li> - Standby</li>
+ * <li> - Status</li>
+ * <li> - StatusDetails</li>
+ * <li> - Tags</li>
+ * <li> - Volume(%)</li>
+ * <li> - VolumeCurrentValue(%)</li>
+ * </ul>
+ *
+ * Content Group:
+ * <ul>
+ * <li> - Id</li>
+ * <li> - Source</li>
+ * <li> - Type</li>
+ * </ul>
+ *
+ * @author Harry / Symphony Dev Team<br>
+ * Created on 20/12/2023
+ * @since 1.0.0
+ */
 public class HaivisionMediaPlatformCommunicator extends RestCommunicator implements Aggregator, Monitorable, Controller {
 	/**
 	 * Process that is running constantly and triggers collecting data from Haivision Media Platform API endpoints, based on the given timeouts and thresholds.
@@ -220,7 +264,7 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 	/**
 	 * check control
 	 */
-	private boolean checkControl = false;
+	private boolean checkControl;
 
 	/**
 	 * API Token
@@ -598,7 +642,8 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 	 */
 	private boolean checkValidCookieSession() throws Exception {
 		try {
-			this.doGet(HaivisionMediaPlatformCommand.LOGIN_COMMAND, JsonNode.class);
+			//Send request to check valid cookie
+			this.doGet(HaivisionMediaPlatformCommand.LOGIN_COMMAND);
 		} catch (Exception e) {
 			cookieSession = getCookieSession();
 			if (HaivisionMediaPlatformConstant.EMPTY.equals(cookieSession)) {
@@ -630,32 +675,36 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 	}
 
 	/**
-	 * Get system information of HaivisionMediaPlatform
+	 * Retrieves system information and populates the provided stats map.
+	 *
+	 * @param stats The map to store the retrieved system information.
 	 */
 	private void retrieveAndPopulateSystemInfo(Map<String, String> stats) {
 		try {
 			JsonNode buildVersionResponse = this.doGet(HaivisionMediaPlatformCommand.SYSTEM_INFO_COMMAND, JsonNode.class);
 			for (SystemInfo systemInfo : SystemInfo.values()) {
+				String propertyName = systemInfo.getName();
+				String value = systemInfo.getValue();
 				switch (systemInfo) {
 					case VERSION:
 					case BUILD:
 						if (buildVersionResponse != null && buildVersionResponse.has(HaivisionMediaPlatformConstant.DATA)) {
-							stats.put(systemInfo.getName(), buildVersionResponse.get(HaivisionMediaPlatformConstant.DATA).get(systemInfo.getValue()).asText());
+							stats.put(propertyName, buildVersionResponse.get(HaivisionMediaPlatformConstant.DATA).get(value).asText());
 						} else {
-							stats.put(systemInfo.getName(), HaivisionMediaPlatformConstant.NONE);
+							stats.put(propertyName, HaivisionMediaPlatformConstant.NONE);
 						}
 						break;
 					case NUMBER_OF_DEVICES:
 						if (aggregatorResponse != null && aggregatorResponse.has(HaivisionMediaPlatformConstant.PAGING)) {
-							stats.put(systemInfo.getName(), aggregatorResponse.get(HaivisionMediaPlatformConstant.PAGING).get(systemInfo.getValue()).asText());
+							stats.put(propertyName, aggregatorResponse.get(HaivisionMediaPlatformConstant.PAGING).get(value).asText());
 						}
 						if (aggregatorResponse == null || aggregatorResponse.has(HaivisionMediaPlatformConstant.HTTP_STATUS_CODE)
 								&& aggregatorResponse.get(HaivisionMediaPlatformConstant.HTTP_STATUS_CODE).asInt() == 404) {
-							stats.put(systemInfo.getName(), HaivisionMediaPlatformConstant.ZERO);
+							stats.put(propertyName, HaivisionMediaPlatformConstant.ZERO);
 						}
 						break;
 					default:
-						stats.put(systemInfo.getName(), HaivisionMediaPlatformConstant.NONE);
+						stats.put(propertyName, HaivisionMediaPlatformConstant.NONE);
 				}
 			}
 		} catch (Exception e) {
@@ -680,7 +729,7 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 			commands.add(String.format(HaivisionMediaPlatformCommand.LAYOUT_COMMAND, "2"));
 			contentValues.clear();
 			for (String command : commands) {
-				response = this.doGet(command, JsonNode.class);
+				response = doGetContentCommand(command);
 				if (response != null && response.has(HaivisionMediaPlatformConstant.DATA)) {
 					for (JsonNode item : response.get(HaivisionMediaPlatformConstant.DATA)) {
 						switch (command) {
@@ -712,10 +761,24 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 	}
 
 	/**
-	 * Filters devices based on specified criteria such as device types and tags.
-	 * Retrieves device information using the Haivision Media Platform.
-	 * The method constructs a command to get device information based on the provided filters.
-	 * It retrieves the response from the Haivision Media Platform and stores it in the aggregatorResponse attribute.
+	 * Performs a GET request for content using the provided command and returns the JSON response.
+	 *
+	 * @param command The command string to retrieve content.
+	 * @return JSON response obtained from the GET request, or null if an error occurs.
+	 */
+	private JsonNode doGetContentCommand(String command) {
+		try {
+			return this.doGet(command, JsonNode.class);
+		} catch (Exception e) {
+			logger.error(String.format("Error when retrieve content command %s, %s", command, e));
+			return null;
+		}
+	}
+
+	/**
+	 * Retrieves device information for a specific page from the Haivision Media Platform API.
+	 *
+	 * @param page The page number for device information retrieval.
 	 */
 	private void retrieveDeviceInformationByPage(int page) {
 		try {
@@ -907,8 +970,9 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 		try {
 			String command = String.format(HaivisionMediaPlatformCommand.STB_COMMAND, deviceId);
 			JsonNode response = this.doPost(command, body, JsonNode.class);
-			if (response == null) {
-				throw new IllegalArgumentException("The response is empty");
+			if (response == null || !response.has(HaivisionMediaPlatformConstant.DATA) || !response.get(HaivisionMediaPlatformConstant.DATA).has(HaivisionMediaPlatformConstant.STATUS)
+					|| !HaivisionMediaPlatformConstant.OK.equals(response.get(HaivisionMediaPlatformConstant.DATA).get(HaivisionMediaPlatformConstant.STATUS).asText())) {
+				throw new IllegalArgumentException("The failed response when send request");
 			}
 		} catch (CommandFailureException ex) {
 			if (ex.getMessage() != null && ex.getMessage().contains("Device stream not found")) {

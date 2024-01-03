@@ -46,6 +46,7 @@ public class HaivisionMediaPlatformConstant {
 	public static final String VOLUME = "volume";
 	public static final String COMPOSITION = "composition";
 	public static final String COMMAND = "command";
+	public static final String STATUS = "status";
 	public static final String CONTENT_GROUP = "Content#";
 	public static final String VOLUME_CURRENT_VALUE = "VolumeCurrentValue(%)";
 	public static final String REBOOT = "Reboot";
@@ -59,4 +60,5 @@ public class HaivisionMediaPlatformConstant {
 	public static final String SET_VOLUME = "set-volume";
 	public static final String SET_CHANNEL = "set-channel";
 	public static final String REBOOT_COMMAND = "reboot";
+	public static final String OK = "ok";
 }
