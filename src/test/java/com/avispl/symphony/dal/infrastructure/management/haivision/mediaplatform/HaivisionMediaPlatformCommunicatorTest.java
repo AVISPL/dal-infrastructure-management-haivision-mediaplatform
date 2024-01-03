@@ -91,6 +91,21 @@ public class HaivisionMediaPlatformCommunicatorTest {
 	}
 
 	/**
+	 * Tests the retrieval of aggregated data with a specific device type filter applied, verifying the statistics accordingly.
+	 *
+	 * @throws Exception if there's an error during the test process.
+	 */
+	@Test
+	void testAggregatorWithFilteringTagName() throws Exception {
+		haivisionMediaPlatformCommunicator.setFilterByTagName("H2");
+		extendedStatistic = (ExtendedStatistics) haivisionMediaPlatformCommunicator.getMultipleStatistics().get(0);
+		Map<String, String> statistics = extendedStatistic.getStatistics();
+		List<AdvancedControllableProperty> advancedControllablePropertyList = extendedStatistic.getControllableProperties();
+		Assert.assertEquals(3, statistics.size());
+		Assert.assertEquals("3", statistics.get("NumberOfDevices"));
+	}
+
+	/**
 	 * Tests the retrieval of aggregated data with multiple device type filters applied, verifying the resulting statistics.
 	 *
 	 * @throws Exception if there's an error during the test process.
@@ -118,6 +133,21 @@ public class HaivisionMediaPlatformCommunicatorTest {
 		Thread.sleep(30000);
 		List<AggregatedDevice> aggregatedDeviceList = haivisionMediaPlatformCommunicator.retrieveMultipleStatistics();
 		Assert.assertEquals(33, aggregatedDeviceList.size());
+	}
+
+	/**
+	 * Tests the retrieval of multiple statistics with specific device type filters applied, verifying the number of devices in the aggregated list.
+	 *
+	 * @throws Exception if there's an error during the test process.
+	 */
+	@Test
+	void testGetMultipleStatisticsWithTagNameFilter() throws Exception {
+		haivisionMediaPlatformCommunicator.setFilterByTagName("H2");
+		haivisionMediaPlatformCommunicator.getMultipleStatistics();
+		haivisionMediaPlatformCommunicator.retrieveMultipleStatistics();
+		Thread.sleep(30000);
+		List<AggregatedDevice> aggregatedDeviceList = haivisionMediaPlatformCommunicator.retrieveMultipleStatistics();
+		Assert.assertEquals(3, aggregatedDeviceList.size());
 	}
 
 	/**

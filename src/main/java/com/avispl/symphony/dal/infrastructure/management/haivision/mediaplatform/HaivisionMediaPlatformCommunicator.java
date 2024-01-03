@@ -366,7 +366,7 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 			Map<String, String> statistics = new HashMap<>();
 			ExtendedStatistics extendedStatistics = new ExtendedStatistics();
 			getContentValue();
-			filterDevice(1);
+			retrieveDeviceInformationByPage(1);
 			retrieveAndPopulateSystemInfo(statistics);
 			extendedStatistics.setStatistics(statistics);
 			localExtendedStatistics = extendedStatistics;
@@ -401,24 +401,24 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 				AggregatedInfo propertyItem = AggregatedInfo.getByName(propertyName);
 				switch (propertyItem) {
 					case MUTE:
-						String commandValue = "unmute";
+						String commandValue = HaivisionMediaPlatformConstant.UN_MUTE;
 						if (HaivisionMediaPlatformConstant.NUMBER_ONE.equals(value)) {
-							commandValue = "mute";
+							commandValue = HaivisionMediaPlatformConstant.MUTE;
 						}
 						body.put(HaivisionMediaPlatformConstant.COMMAND, commandValue);
 						sendSTBCommandToDevice(deviceId, body, propertyName, getSwitchStatus(value));
 						break;
 					case STANDBY:
-						commandValue = "standby-off";
+						commandValue = HaivisionMediaPlatformConstant.STANDBY_OFF;
 						if (HaivisionMediaPlatformConstant.NUMBER_ONE.equals(value)) {
-							commandValue = "standby-on";
+							commandValue = HaivisionMediaPlatformConstant.STANDBY_ON;
 						}
 						body.put(HaivisionMediaPlatformConstant.COMMAND, commandValue);
 						sendSTBCommandToDevice(deviceId, body, propertyName, getSwitchStatus(value));
 						break;
 					case VOLUME:
 						double newValue = Double.parseDouble(value) / 100.0;
-						body.put(HaivisionMediaPlatformConstant.COMMAND, "set-volume");
+						body.put(HaivisionMediaPlatformConstant.COMMAND, HaivisionMediaPlatformConstant.SET_VOLUME);
 						ObjectNode childNode = objectMapper.createObjectNode();
 						childNode.put(HaivisionMediaPlatformConstant.VOLUME, newValue);
 						body.set(HaivisionMediaPlatformConstant.PARAMETERS, childNode);
@@ -426,7 +426,7 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 						stats.put(HaivisionMediaPlatformConstant.VOLUME_CURRENT_VALUE, value);
 						break;
 					case REBOOT:
-						commandValue = "reboot";
+						commandValue = HaivisionMediaPlatformConstant.REBOOT_COMMAND;
 						body.put(HaivisionMediaPlatformConstant.COMMAND, commandValue);
 						sendSTBCommandToDevice(deviceId, body, propertyName, HaivisionMediaPlatformConstant.EMPTY);
 						break;
@@ -452,7 +452,7 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 								.filter(content -> content.getName().equals(name) && content.getType().equals(type))
 								.map(Content::getId).findFirst();
 						if (foundId.isPresent()) {
-							body.put(HaivisionMediaPlatformConstant.COMMAND, "set-channel");
+							body.put(HaivisionMediaPlatformConstant.COMMAND, HaivisionMediaPlatformConstant.SET_CHANNEL);
 							childNode = objectMapper.createObjectNode();
 							childNode.put(HaivisionMediaPlatformConstant.ID, foundId.get());
 							childNode.put(HaivisionMediaPlatformConstant.NAME, name);
@@ -717,7 +717,7 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 	 * The method constructs a command to get device information based on the provided filters.
 	 * It retrieves the response from the Haivision Media Platform and stores it in the aggregatorResponse attribute.
 	 */
-	private void filterDevice(int page) {
+	private void retrieveDeviceInformationByPage(int page) {
 		try {
 			String command = String.format(HaivisionMediaPlatformCommand.GET_DEVICE_INFO_COMMAND, page, HaivisionMediaPlatformConstant.PAGE_SIZE);
 			if (StringUtils.isNotNullOrEmpty(filterByDeviceType)) {
@@ -742,7 +742,7 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 	 * @return The string with extra spaces removed and consistent formatting
 	 */
 	private String removeExtraSpaces(String input) {
-		return input.replaceAll("\\s++", " ").replaceAll(",\\s+", ",");
+		return input.replaceAll("\\s++", HaivisionMediaPlatformConstant.EMPTY).replaceAll(",\\s+", HaivisionMediaPlatformConstant.COMMA);
 	}
 
 	/**
@@ -752,7 +752,7 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 	 * @return An array of strings obtained from the input string after formatting
 	 */
 	private String[] convertToArray(String input) {
-		String[] output = removeExtraSpaces(input).split(",");
+		String[] output = removeExtraSpaces(input).split(HaivisionMediaPlatformConstant.COMMA);
 		for (int i = 0; i < output.length; i++) {
 			output[i] = "\"" + EnumTypeHandler.getValueByName(DeviceTypeFilterEnum.class, output[i].trim()) + "\"";
 		}
@@ -765,13 +765,13 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 	 */
 	private void populateDeviceDetails() {
 		try {
-			filterDevice(1);
+			retrieveDeviceInformationByPage(1);
 			if (aggregatorResponse != null && aggregatorResponse.has(HaivisionMediaPlatformConstant.DATA) && aggregatorResponse.get(HaivisionMediaPlatformConstant.DATA).isArray()) {
 				cachedAggregatedDeviceList.clear();
 				int numPages = aggregatorResponse.get(HaivisionMediaPlatformConstant.PAGING).get(HaivisionMediaPlatformConstant.NUM_PAGES).asInt();
 				for (int i = 1; i < numPages + 1; i++) {
 					if (i != 1) {
-						filterDevice(i);
+						retrieveDeviceInformationByPage(i);
 					}
 					for (JsonNode jsonNode : aggregatorResponse.get(HaivisionMediaPlatformConstant.DATA)) {
 						String id = jsonNode.get("_id").asText();
