@@ -4,7 +4,9 @@ on:
   push:
     branches:
       - main
+      - 'release/**'
       - 'hotfix/**'
+
 jobs:
   prep:
     runs-on: ubuntu-latest
