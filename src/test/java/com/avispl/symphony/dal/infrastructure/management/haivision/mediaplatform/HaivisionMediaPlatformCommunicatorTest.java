@@ -142,7 +142,7 @@ public class HaivisionMediaPlatformCommunicatorTest {
 	 */
 	@Test
 	void testGetMultipleStatisticsWithTagNameFilter() throws Exception {
-		haivisionMediaPlatformCommunicator.setFilterByTagName("H2");
+		haivisionMediaPlatformCommunicator.setFilterByTagName("  H2 ");
 		haivisionMediaPlatformCommunicator.getMultipleStatistics();
 		haivisionMediaPlatformCommunicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);

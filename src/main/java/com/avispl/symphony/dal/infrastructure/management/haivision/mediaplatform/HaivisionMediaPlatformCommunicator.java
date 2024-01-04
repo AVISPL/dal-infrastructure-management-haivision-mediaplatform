@@ -721,39 +721,50 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 			String name;
 			String type;
 			String id;
+			boolean nextPage;
+			int numPage;
 			List<String> commands = new ArrayList<>();
 			commands.add(HaivisionMediaPlatformCommand.SOURCE_COMMAND);
 			commands.add(HaivisionMediaPlatformCommand.VIDEO_COMMAND);
 			commands.add(HaivisionMediaPlatformCommand.SESSION_COMMAND);
-			commands.add(String.format(HaivisionMediaPlatformCommand.LAYOUT_COMMAND, "1"));
-			commands.add(String.format(HaivisionMediaPlatformCommand.LAYOUT_COMMAND, "2"));
+			commands.add(HaivisionMediaPlatformCommand.LAYOUT_COMMAND);
 			contentValues.clear();
 			for (String command : commands) {
-				response = doGetContentCommand(command);
-				if (response != null && response.has(HaivisionMediaPlatformConstant.DATA)) {
-					for (JsonNode item : response.get(HaivisionMediaPlatformConstant.DATA)) {
-						switch (command) {
-							case HaivisionMediaPlatformCommand.SOURCE_COMMAND:
-								name = item.get(HaivisionMediaPlatformConstant.NAME).asText().trim();
-								id = item.get(HaivisionMediaPlatformConstant.ID).asText().trim();
-								type = HaivisionMediaPlatformConstant.SOURCE;
-								break;
-							case HaivisionMediaPlatformCommand.VIDEO_COMMAND:
-							case HaivisionMediaPlatformCommand.SESSION_COMMAND:
-								name = item.get(HaivisionMediaPlatformConstant.TITLE).asText().trim();
-								id = item.get(HaivisionMediaPlatformConstant.ID).asText().trim();
-								type = item.get(HaivisionMediaPlatformConstant.ITEM_TYPE).asText().trim();
-								break;
-							default:
-								name = item.get(HaivisionMediaPlatformConstant.TITLE).asText().trim();
-								id = item.get(HaivisionMediaPlatformConstant.ID).asText().trim();
-								type = HaivisionMediaPlatformConstant.COMPOSITION;
-								break;
+				numPage = 1;
+				do {
+					nextPage = false;
+					response = doGetContentCommand(command, String.valueOf(numPage));
+					if (response != null && response.has(HaivisionMediaPlatformConstant.DATA)) {
+						for (JsonNode item : response.get(HaivisionMediaPlatformConstant.DATA)) {
+							switch (command) {
+								case HaivisionMediaPlatformCommand.SOURCE_COMMAND:
+									name = item.get(HaivisionMediaPlatformConstant.NAME).asText().trim();
+									id = item.get(HaivisionMediaPlatformConstant.ID).asText().trim();
+									type = HaivisionMediaPlatformConstant.SOURCE;
+									break;
+								case HaivisionMediaPlatformCommand.VIDEO_COMMAND:
+								case HaivisionMediaPlatformCommand.SESSION_COMMAND:
+									name = item.get(HaivisionMediaPlatformConstant.TITLE).asText().trim();
+									id = item.get(HaivisionMediaPlatformConstant.ID).asText().trim();
+									type = item.get(HaivisionMediaPlatformConstant.ITEM_TYPE).asText().trim();
+									break;
+								default:
+									name = item.get(HaivisionMediaPlatformConstant.TITLE).asText().trim();
+									id = item.get(HaivisionMediaPlatformConstant.ID).asText().trim();
+									type = HaivisionMediaPlatformConstant.COMPOSITION;
+									break;
+							}
+							Content contentObject = new Content(id, name, type);
+							contentValues.add(contentObject);
 						}
-						Content contentObject = new Content(id, name, type);
-						contentValues.add(contentObject);
+
+						if (response.has(HaivisionMediaPlatformConstant.PAGING) && response.get(HaivisionMediaPlatformConstant.PAGING).has("next")) {
+								numPage++;
+								nextPage = true;
+						}
 					}
 				}
+				while (nextPage);
 			}
 		} catch (Exception e) {
 			logger.error(String.format("Error when get content value, %s", e));
@@ -766,8 +777,9 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 	 * @param command The command string to retrieve content.
 	 * @return JSON response obtained from the GET request, or null if an error occurs.
 	 */
-	private JsonNode doGetContentCommand(String command) {
+	private JsonNode doGetContentCommand(String command, String numPage) {
 		try {
+			command = String.format(command, numPage);
 			return this.doGet(command, JsonNode.class);
 		} catch (Exception e) {
 			logger.error(String.format("Error when retrieve content command %s, %s", command, e));
