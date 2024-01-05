@@ -34,6 +34,7 @@ public enum AggregatedInfo {
 	VOLUME("Volume(%)"),
 	STATUS("Status"),
 	APPLY_CHANGE("ApplyChange"),
+	CANCEL("Cancel"),
 	;
 	private final String name;
 

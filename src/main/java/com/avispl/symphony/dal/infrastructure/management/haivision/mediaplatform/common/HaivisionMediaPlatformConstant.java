@@ -53,6 +53,8 @@ public class HaivisionMediaPlatformConstant {
 	public static final String REBOOTING = "Rebooting";
 	public static final String SAVE = "Save";
 	public static final String SAVING = "Saving";
+	public static final String CANCEL = "Cancel";
+	public static final String CANCELING = "Canceling";
 	public static final String MUTE = "mute";
 	public static final String UN_MUTE = "unmute";
 	public static final String STANDBY_ON = "standby-on";
