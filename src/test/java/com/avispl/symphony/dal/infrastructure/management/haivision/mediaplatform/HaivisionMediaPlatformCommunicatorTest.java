@@ -221,7 +221,7 @@ public class HaivisionMediaPlatformCommunicatorTest {
 		Thread.sleep(30000);
 		haivisionMediaPlatformCommunicator.retrieveMultipleStatistics();
 		ControllableProperty controllableProperty = new ControllableProperty();
-		String property = "Content#ApplyChange";
+		String property = "Content#SaveChanges";
 		String value = "1";
 		String deviceId = "yjdeqZ5k02-P3glODo4GvA";
 		controllableProperty.setProperty(property);
@@ -247,9 +247,9 @@ public class HaivisionMediaPlatformCommunicatorTest {
 		Thread.sleep(30000);
 		haivisionMediaPlatformCommunicator.retrieveMultipleStatistics();
 		ControllableProperty controllableProperty = new ControllableProperty();
-		String property = "Volume(%)";
+		String property = "Controls#Volume(%)";
 		String value = "50.0";
-		String deviceId = "yjdeqZ5k02-P3glODo4GvA";
+		String deviceId = "TCfg3p5HYOzrekyVISMYXg";
 		controllableProperty.setProperty(property);
 		controllableProperty.setValue(value);
 		controllableProperty.setDeviceId(deviceId);
@@ -273,9 +273,9 @@ public class HaivisionMediaPlatformCommunicatorTest {
 		Thread.sleep(30000);
 		haivisionMediaPlatformCommunicator.retrieveMultipleStatistics();
 		ControllableProperty controllableProperty = new ControllableProperty();
-		String property = "Standby";
-		String value = "1";
-		String deviceId = "yjdeqZ5k02-P3glODo4GvA";
+		String property = "Controls#Mute";
+		String value = "0";
+		String deviceId = "TCfg3p5HYOzrekyVISMYXg";
 		controllableProperty.setProperty(property);
 		controllableProperty.setValue(value);
 		controllableProperty.setDeviceId(deviceId);

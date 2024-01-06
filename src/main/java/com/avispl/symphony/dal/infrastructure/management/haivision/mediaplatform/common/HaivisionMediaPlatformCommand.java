@@ -14,7 +14,8 @@ package com.avispl.symphony.dal.infrastructure.management.haivision.mediaplatfor
 public class HaivisionMediaPlatformCommand {
 	public static final String LOGIN_COMMAND = "apis/authentication/login";
 	public static final String SYSTEM_INFO_COMMAND = "apis/system/version";
-	public static final String GET_DEVICE_INFO_COMMAND = "apis/devices/stbs?page=%s&pageSize=%s";
+	public static final String GET_ALL_DEVICES_INFO_COMMAND = "apis/devices/stbs?page=%s&pageSize=%s";
+	public static final String GET_DEVICE_INFO_COMMAND = "apis/devices/stbs/%s";
 	public static final String STB_COMMAND = "apis/devices/stbs/%s/commands";
 	public static final String SOURCE_COMMAND = "apis/sources?page=%s&pageSize=100";
 	public static final String VIDEO_COMMAND = "apis/sections/content?itemType=asset&page=%s&pageSize=100";

@@ -47,12 +47,14 @@ public class HaivisionMediaPlatformConstant {
 	public static final String COMPOSITION = "composition";
 	public static final String COMMAND = "command";
 	public static final String STATUS = "status";
+	public static final String LENGTH = "length";
 	public static final String CONTENT_GROUP = "Content#";
+	public static final String CONTROLS_GROUP = "Controls#";
 	public static final String VOLUME_CURRENT_VALUE = "VolumeCurrentValue(%)";
 	public static final String REBOOT = "Reboot";
 	public static final String REBOOTING = "Rebooting";
-	public static final String SAVE = "Save";
-	public static final String SAVING = "Saving";
+	public static final String APPLY = "Apply";
+	public static final String APPLYING = "Applying";
 	public static final String CANCEL = "Cancel";
 	public static final String CANCELING = "Canceling";
 	public static final String MUTE = "mute";
@@ -63,4 +65,8 @@ public class HaivisionMediaPlatformConstant {
 	public static final String SET_CHANNEL = "set-channel";
 	public static final String REBOOT_COMMAND = "reboot";
 	public static final String OK = "ok";
+	public static final String STANDBY_PROPERTY = "Standby";
+	public static final String MUTE_PROPERTY = "Mute";
+	public static final String APPLY_CHANGES = "ApplyChanges";
+	public static final String VOLUME_PROPERTY = "Volume(%)";
 }

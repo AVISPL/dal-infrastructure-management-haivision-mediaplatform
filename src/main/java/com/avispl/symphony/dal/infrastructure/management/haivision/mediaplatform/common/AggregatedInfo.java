@@ -22,19 +22,17 @@ public enum AggregatedInfo {
 	EXTENSION("Extension"),
 	STATUS_DETAILS("StatusDetails"),
 	LAST_CONNECT_AT("LastConnectedAt"),
-	LAST_ACCEPTED_UPDATE("LastAcceptedUpdate"),
 	HOSTNAME("Hostname"),
-	CONTENT_ID("Id"),
 	CONTENT_SOURCE("Source"),
-	CONTENT_TYPE("Type"),
+	CONTENT_TYPE("ContentType"),
 	TAGS("Tags"),
 	MUTE("Mute"),
 	REBOOT("Reboot"),
 	STANDBY("Standby"),
 	VOLUME("Volume(%)"),
 	STATUS("Status"),
-	APPLY_CHANGE("ApplyChange"),
-	CANCEL("Cancel"),
+	APPLY_CHANGES("ApplyChanges"),
+	CANCEL_CHANGES("CancelChanges"),
 	;
 	private final String name;
 
