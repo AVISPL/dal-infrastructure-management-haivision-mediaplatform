@@ -65,8 +65,6 @@ public class HaivisionMediaPlatformConstant {
 	public static final String SET_CHANNEL = "set-channel";
 	public static final String REBOOT_COMMAND = "reboot";
 	public static final String OK = "ok";
-	public static final String STANDBY_PROPERTY = "Standby";
-	public static final String MUTE_PROPERTY = "Mute";
-	public static final String APPLY_CHANGES = "ApplyChanges";
-	public static final String VOLUME_PROPERTY = "Volume(%)";
+	public static final String CHANNEL_NAME = "channelName";
+	public static final String CHANNEL_TYPE = "channelType";
 }

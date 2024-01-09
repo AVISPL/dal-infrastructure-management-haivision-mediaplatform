@@ -78,25 +78,29 @@ import com.avispl.symphony.dal.util.StringUtils;
  * <li> - Firmware</li>
  * <li> - Hostname</li>
  * <li> - IPAddress</li>
- * <li> - LastAcceptedUpdate</li>
  * <li> - LastConnectedAt</li>
  * <li> - MACAddress</li>
- * <li> - Mute</li>
  * <li> - NTPServer</li>
- * <li> - Reboot</li>
  * <li> - Standby</li>
  * <li> - Status</li>
  * <li> - StatusDetails</li>
  * <li> - Tags</li>
- * <li> - Volume(%)</li>
- * <li> - VolumeCurrentValue(%)</li>
  * </ul>
  *
  * Content Group:
  * <ul>
- * <li> - Id</li>
+ * <li> - ApplyChanges</li>
+ * <li> - CancelChanges</li>
+ * <li> - ContentType</li>
  * <li> - Source</li>
- * <li> - Type</li>
+ * </ul>
+ *
+ * Controls Group:
+ * <ul>
+ * <li> - Mute</li>
+ * <li> - Reboot</li>
+ * <li> - Volume(%)</li>
+ * <li> - VolumeCurrentValue(%)</li>
  * </ul>
  *
  * @author Harry / Symphony Dev Team<br>
@@ -264,17 +268,17 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 	/**
 	 * List of content value
 	 */
-	private Map<String, Map<String, String>> initContentValue = new HashMap<>();
-
-	/**
-	 * List of content value
-	 */
 	private Map<String, Boolean> checkChangedProperties = new HashMap<>();
 
 	/**
 	 * check control
 	 */
 	private boolean checkControl;
+
+	/**
+	 * check next polling interval after control
+	 */
+	private boolean checkNextPollingAfterControl;
 
 	/**
 	 * API Token
@@ -335,7 +339,7 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 	/**
 	 * Update the status of the device.
 	 * The device is considered as paused if did not receive any retrieveMultipleStatistics()
-	 * calls during {@link com.avispl.symphony.dal.infrastructure.management.haivision.mediaplatform.HaivisionMediaPlatformCommunicator}
+	 * calls during {@link HaivisionMediaPlatformCommunicator}
 	 */
 	private synchronized void updateAggregatorStatus() {
 		devicePaused = validRetrieveStatisticsTimestamp < System.currentTimeMillis();
@@ -540,17 +544,22 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 
 							List<String> arrayValues = Arrays.stream(ChannelTypeEnum.values()).map(ChannelTypeEnum::getName).collect(Collectors.toList());
 							arrayValues.add(0, HaivisionMediaPlatformConstant.NONE);
-							addAdvancedControlProperties(advancedControllableProperties, stats,
-									createDropdown(HaivisionMediaPlatformConstant.CONTENT_GROUP + AggregatedInfo.CONTENT_TYPE.getName(), arrayValues.toArray(new String[0]),
-											EnumTypeHandler.getNameByValue(ChannelTypeEnum.class, type.trim())), type);
+							if (HaivisionMediaPlatformConstant.NUMBER_ONE.equals(stats.get(AggregatedInfo.STANDBY.getName())) && !type.equals("composition")) {
+								addAdvancedControlProperties(advancedControllableProperties, stats,
+										createDropdown(HaivisionMediaPlatformConstant.CONTENT_GROUP + AggregatedInfo.CONTENT_TYPE.getName(), arrayValues.toArray(new String[0]), HaivisionMediaPlatformConstant.NONE),
+										HaivisionMediaPlatformConstant.NONE);
+								removeValueForTheControllableProperty(stats, advancedControllableProperties, HaivisionMediaPlatformConstant.CONTENT_GROUP + AggregatedInfo.CONTENT_SOURCE.getName());
+								stats.put(HaivisionMediaPlatformConstant.CONTENT_GROUP + AggregatedInfo.CONTENT_SOURCE.getName(), HaivisionMediaPlatformConstant.NONE);
+							} else {
+								addAdvancedControlProperties(advancedControllableProperties, stats,
+										createDropdown(HaivisionMediaPlatformConstant.CONTENT_GROUP + AggregatedInfo.CONTENT_TYPE.getName(), arrayValues.toArray(new String[0]),
+												EnumTypeHandler.getNameByValue(ChannelTypeEnum.class, type.trim())), type);
 
-							namesWithMatchingType = contentValues.stream().filter(content -> content.getType().equals(type))
-									.map(Content::getName).collect(Collectors.toList());
-							addAdvancedControlProperties(advancedControllableProperties, stats,
-									createDropdown(HaivisionMediaPlatformConstant.CONTENT_GROUP + AggregatedInfo.CONTENT_SOURCE.getName(), namesWithMatchingType.toArray(new String[0]), name.trim()), name);
-
-							putValueIntoMap(initContentValue, deviceId, AggregatedInfo.CONTENT_TYPE.getName(), type);
-							putValueIntoMap(initContentValue, deviceId, AggregatedInfo.CONTENT_SOURCE.getName(), name);
+								namesWithMatchingType = contentValues.stream().filter(content -> content.getType().equals(type))
+										.map(Content::getName).collect(Collectors.toList());
+								addAdvancedControlProperties(advancedControllableProperties, stats,
+										createDropdown(HaivisionMediaPlatformConstant.CONTENT_GROUP + AggregatedInfo.CONTENT_SOURCE.getName(), namesWithMatchingType.toArray(new String[0]), name.trim()), name);
+							}
 							checkChangedProperties.put(deviceId, false);
 							removeValueForTheControllableProperty(stats, advancedControllableProperties, HaivisionMediaPlatformConstant.CONTENT_GROUP + AggregatedInfo.CANCEL_CHANGES.getName());
 							removeValueForTheControllableProperty(stats, advancedControllableProperties, HaivisionMediaPlatformConstant.CONTENT_GROUP + AggregatedInfo.APPLY_CHANGES.getName());
@@ -559,19 +568,25 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 						}
 						break;
 					case CANCEL_CHANGES:
-						name = initContentValue.get(deviceId).get(AggregatedInfo.CONTENT_SOURCE.getName());
-						type = initContentValue.get(deviceId).get(AggregatedInfo.CONTENT_TYPE.getName());
+						JsonNode deviceInfo = sendCommandGetDeviceInfo(deviceId);
+						name = deviceInfo.get(HaivisionMediaPlatformConstant.CHANNEL_NAME).asText().trim();
+						type = deviceInfo.get(HaivisionMediaPlatformConstant.CHANNEL_TYPE).asText().trim();
+
 						List<String> arrayValues = Arrays.stream(ChannelTypeEnum.values()).map(ChannelTypeEnum::getName).collect(Collectors.toList());
 						arrayValues.add(0, HaivisionMediaPlatformConstant.NONE);
 						addAdvancedControlProperties(advancedControllableProperties, stats,
 								createDropdown(HaivisionMediaPlatformConstant.CONTENT_GROUP + AggregatedInfo.CONTENT_TYPE.getName(), arrayValues.toArray(new String[0]),
 										EnumTypeHandler.getNameByValue(ChannelTypeEnum.class, type.trim())), type);
 
-						namesWithMatchingType = contentValues.stream().filter(content -> content.getType().equals(type))
-								.map(Content::getName).collect(Collectors.toList());
-						addAdvancedControlProperties(advancedControllableProperties, stats,
-								createDropdown(HaivisionMediaPlatformConstant.CONTENT_GROUP + AggregatedInfo.CONTENT_SOURCE.getName(), namesWithMatchingType.toArray(new String[0]), name.trim()), name);
-
+						if (HaivisionMediaPlatformConstant.NONE.equals(EnumTypeHandler.getNameByValue(ChannelTypeEnum.class, type.trim()))) {
+							removeValueForTheControllableProperty(stats, advancedControllableProperties, HaivisionMediaPlatformConstant.CONTENT_GROUP + AggregatedInfo.CONTENT_SOURCE.getName());
+							stats.put(HaivisionMediaPlatformConstant.CONTENT_GROUP + AggregatedInfo.CONTENT_SOURCE.getName(), HaivisionMediaPlatformConstant.NONE);
+						} else {
+							namesWithMatchingType = contentValues.stream().filter(content -> content.getType().equals(type))
+									.map(Content::getName).collect(Collectors.toList());
+							addAdvancedControlProperties(advancedControllableProperties, stats,
+									createDropdown(HaivisionMediaPlatformConstant.CONTENT_GROUP + AggregatedInfo.CONTENT_SOURCE.getName(), namesWithMatchingType.toArray(new String[0]), name.trim()), name);
+						}
 						putValueIntoMap(cachedContentValue, deviceId, AggregatedInfo.CONTENT_TYPE.getName(), type);
 						putValueIntoMap(cachedContentValue, deviceId, AggregatedInfo.CONTENT_SOURCE.getName(), name);
 						checkChangedProperties.put(deviceId, false);
@@ -897,7 +912,17 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 	 * @return The string with extra spaces removed and consistent formatting
 	 */
 	private String removeExtraSpaces(String input) {
-		return input.replaceAll("\\s++", HaivisionMediaPlatformConstant.EMPTY).replaceAll(",\\s+", HaivisionMediaPlatformConstant.COMMA);
+		return input.replaceAll("\\s+", HaivisionMediaPlatformConstant.EMPTY).replaceAll(",\\s+", HaivisionMediaPlatformConstant.COMMA);
+	}
+
+	/**
+	 * Removes extra spaces and formats the input string.
+	 *
+	 * @param input The input string possibly containing extra spaces
+	 * @return The string with extra spaces removed and consistent formatting
+	 */
+	private String cleanFilterByDeviceType(String input) {
+		return input.trim().replaceAll(",\\s+", HaivisionMediaPlatformConstant.COMMA);
 	}
 
 	/**
@@ -907,7 +932,7 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 	 * @return An array of strings obtained from the input string after formatting
 	 */
 	private String[] convertToArray(String input) {
-		String[] output = removeExtraSpaces(input).split(HaivisionMediaPlatformConstant.COMMA);
+		String[] output = cleanFilterByDeviceType(input).split(HaivisionMediaPlatformConstant.COMMA);
 		for (int i = 0; i < output.length; i++) {
 			output[i] = "\"" + EnumTypeHandler.getValueByName(DeviceTypeFilterEnum.class, output[i].trim()) + "\"";
 		}
@@ -949,22 +974,28 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 	 */
 	private List<AggregatedDevice> cloneAndPopulateAggregatedDeviceList() {
 		if (!checkControl) {
-			synchronized (cachedAggregatedDeviceList) {
-				aggregatedDeviceList.clear();
-				for (AggregatedDevice aggregatedDevice : cachedAggregatedDeviceList) {
-					List<AdvancedControllableProperty> advancedControllableProperties = new ArrayList<>();
-					String model = EnumTypeHandler.getNameByValue(DeviceTypeFilterEnum.class, aggregatedDevice.getDeviceModel());
-					if (!HaivisionMediaPlatformConstant.NONE.equals(model)) {
-						aggregatedDevice.setDeviceModel(model);
-					}
-					Map<String, String> stats = new HashMap<>();
-					mapStatsAndControlForAggregatedDevice(aggregatedDevice.getDeviceId(), aggregatedDevice.getProperties(), stats, advancedControllableProperties);
+			if (!checkNextPollingAfterControl) {
+				synchronized (cachedAggregatedDeviceList) {
+					aggregatedDeviceList.clear();
+					for (AggregatedDevice aggregatedDevice : cachedAggregatedDeviceList) {
+						List<AdvancedControllableProperty> advancedControllableProperties = new ArrayList<>();
+						String model = EnumTypeHandler.getNameByValue(DeviceTypeFilterEnum.class, aggregatedDevice.getDeviceModel());
+						if (!HaivisionMediaPlatformConstant.NONE.equals(model)) {
+							aggregatedDevice.setDeviceModel(model);
+						}
+						Map<String, String> stats = new HashMap<>();
+						mapStatsAndControlForAggregatedDevice(aggregatedDevice.getDeviceId(), aggregatedDevice.getProperties(), stats, advancedControllableProperties);
 
-					aggregatedDevice.setProperties(stats);
-					aggregatedDevice.setControllableProperties(advancedControllableProperties);
-					aggregatedDeviceList.add(aggregatedDevice);
+						aggregatedDevice.setProperties(stats);
+						aggregatedDevice.setControllableProperties(advancedControllableProperties);
+						aggregatedDeviceList.add(aggregatedDevice);
+					}
 				}
+			} else {
+				checkNextPollingAfterControl = false;
 			}
+		} else {
+			checkNextPollingAfterControl = true;
 		}
 		checkControl = false;
 		return aggregatedDeviceList;
@@ -1026,7 +1057,8 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 					break;
 				case STANDBY:
 					addAdvancedControlProperties(advancedControllableProperties, stats,
-							createSwitch(propertyName, HaivisionMediaPlatformConstant.TRUE.equals(value) ? 1 : 0, HaivisionMediaPlatformConstant.OFF, HaivisionMediaPlatformConstant.ON), value);
+							createSwitch(propertyName, HaivisionMediaPlatformConstant.TRUE.equals(value) ? 1 : 0, HaivisionMediaPlatformConstant.OFF, HaivisionMediaPlatformConstant.ON),
+							HaivisionMediaPlatformConstant.TRUE.equals(value) ? "1" : "0");
 					break;
 				case LAST_CONNECT_AT:
 					stats.put(propertyName, convertMillisecondsToDate(value));
@@ -1036,7 +1068,6 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 					stats.put(propertyName, value);
 					break;
 				case CONTENT_SOURCE:
-					putValueIntoMap(initContentValue, deviceId, AggregatedInfo.CONTENT_SOURCE.getName(), value.trim());
 					String type = getDefaultValueForNullData(mappingStatistic.get(AggregatedInfo.CONTENT_TYPE.getName()));
 					if (checkChangedProperties.get(deviceId) != null && checkChangedProperties.get(deviceId)) {
 						value = cachedContentValue.get(deviceId).get(AggregatedInfo.CONTENT_SOURCE.getName());
@@ -1054,7 +1085,6 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 					putValueIntoMap(cachedContentValue, deviceId, AggregatedInfo.CONTENT_SOURCE.getName(), value.trim());
 					break;
 				case CONTENT_TYPE:
-					putValueIntoMap(initContentValue, deviceId, AggregatedInfo.CONTENT_TYPE.getName(), value.trim());
 					if (checkChangedProperties.get(deviceId) != null && checkChangedProperties.get(deviceId)) {
 						value = cachedContentValue.get(deviceId).get(AggregatedInfo.CONTENT_TYPE.getName());
 					}
@@ -1089,7 +1119,6 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 					|| !HaivisionMediaPlatformConstant.OK.equals(response.get(HaivisionMediaPlatformConstant.DATA).get(HaivisionMediaPlatformConstant.STATUS).asText())) {
 				throw new IllegalArgumentException("The failed response when send request");
 			}
-			checkChangedDataWhenSuccessCommand(deviceId, name, value);
 		} catch (CommandFailureException ex) {
 			if (ex.getMessage() != null && ex.getMessage().contains("Device stream not found")) {
 				throw new IllegalArgumentException(String.format("Can't control property %s with value %s. The device must be online and connected (status Online or Standby)", name, value), ex);
@@ -1104,62 +1133,24 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 	}
 
 	/**
-	 * Checks for changed data when a command is successful.
+	 * Retrieves device information using the provided device ID.
 	 *
-	 * @param deviceId The ID of the device.
-	 * @param name The name of the property to check.
-	 * @param value The value to compare.
+	 * @param deviceId The unique identifier for the device.
+	 * @return The JSON node containing device information if the command is sent successfully.
+	 * @throws IllegalArgumentException if the command cannot be sent successfully or an error occurs during the process.
 	 */
-	private void checkChangedDataWhenSuccessCommand(String deviceId, String name, String value) {
-		String node;
-		long startTime = System.currentTimeMillis();
+	private JsonNode sendCommandGetDeviceInfo(String deviceId) {
 		try {
-			do {
-				JsonNode results = this.doGet(String.format(HaivisionMediaPlatformCommand.GET_DEVICE_INFO_COMMAND, deviceId), JsonNode.class);
-				System.out.println(results);
-				switch (name) {
-					case HaivisionMediaPlatformConstant.STANDBY_PROPERTY:
-						node = "standby";
-						if ((results.get(HaivisionMediaPlatformConstant.DATA).get(node).asBoolean() && HaivisionMediaPlatformConstant.ON.equals(value))
-								|| (!results.get(HaivisionMediaPlatformConstant.DATA).get(node).asBoolean() && HaivisionMediaPlatformConstant.OFF.equals(value))) {
-							System.out.println("true");
-							return;
-						}
-						break;
-					case HaivisionMediaPlatformConstant.MUTE_PROPERTY:
-						node = "muted";
-						if ((results.get(HaivisionMediaPlatformConstant.DATA).get(node).asBoolean() && HaivisionMediaPlatformConstant.ON.equals(value))
-								|| (!results.get(HaivisionMediaPlatformConstant.DATA).get(node).asBoolean() && HaivisionMediaPlatformConstant.OFF.equals(value))) {
-							System.out.println("true");
-							return;
-						}
-						break;
-					case HaivisionMediaPlatformConstant.VOLUME_PROPERTY:
-						node = "volume";
-						if (results.get(HaivisionMediaPlatformConstant.DATA).get(node).asDouble() * 100 == Double.parseDouble(value)) {
-							System.out.println("true");
-							return;
-						}
-						break;
-					case HaivisionMediaPlatformConstant.APPLY_CHANGES:
-						node = "channelName";
-						if (value.equals(results.get(HaivisionMediaPlatformConstant.DATA).get(node).asText().trim()) || results.get(HaivisionMediaPlatformConstant.DATA).get(node) == null) {
-							System.out.println("true");
-							return;
-						}
-						break;
-					default:
-						logger.error("Can't find property name");
-						return;
-				}
-				Thread.sleep(3000);
-				if (System.currentTimeMillis() - startTime > 23000) {
-					return;
-				}
+			String command = String.format(HaivisionMediaPlatformCommand.GET_DEVICE_INFO_COMMAND, deviceId);
+			JsonNode response = this.doGet(command, JsonNode.class);
+			if (response != null && response.has(HaivisionMediaPlatformConstant.DATA)
+					&& response.get(HaivisionMediaPlatformConstant.DATA).has(HaivisionMediaPlatformConstant.CHANNEL_NAME)
+					&& response.get(HaivisionMediaPlatformConstant.DATA).has(HaivisionMediaPlatformConstant.CHANNEL_TYPE)) {
+				return response.get(HaivisionMediaPlatformConstant.DATA);
 			}
-			while (true);
+			throw new IllegalArgumentException("The command can't send successfully. Please control again");
 		} catch (Exception e) {
-			logger.error("Error while retrieve device information", e);
+			throw new IllegalArgumentException(String.format("Can't control CancelChanges. %s", e));
 		}
 	}
 
