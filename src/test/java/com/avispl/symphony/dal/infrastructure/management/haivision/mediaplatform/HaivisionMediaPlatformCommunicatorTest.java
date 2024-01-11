@@ -112,8 +112,8 @@ public class HaivisionMediaPlatformCommunicatorTest {
 	 */
 	@Test
 	void testAggregatorWithMultipleFilteringValue() throws Exception {
-		haivisionMediaPlatformCommunicator.setFilterByDeviceType("Play 2000B, Play111");
-		haivisionMediaPlatformCommunicator.setFilterByTagName("  H1,hh ");
+		haivisionMediaPlatformCommunicator.setFilterByDeviceType("Play 2000B, Play 2000A");
+		haivisionMediaPlatformCommunicator.setFilterByTagName("");
 		extendedStatistic = (ExtendedStatistics) haivisionMediaPlatformCommunicator.getMultipleStatistics().get(0);
 		Map<String, String> statistics = extendedStatistic.getStatistics();
 		List<AdvancedControllableProperty> advancedControllablePropertyList = extendedStatistic.getControllableProperties();
@@ -266,7 +266,7 @@ public class HaivisionMediaPlatformCommunicatorTest {
 	}
 
 	/**
-	 * Tests the application of change control for the Standby property of a specific device, ensuring the value is set successfully.
+	 * Tests the application of change control for the Mute property of a specific device, ensuring the value is set successfully.
 	 *
 	 * @throws Exception if there's an error during the test process.
 	 */
@@ -286,6 +286,34 @@ public class HaivisionMediaPlatformCommunicatorTest {
 		haivisionMediaPlatformCommunicator.controlProperty(controllableProperty);
 
 		List<AggregatedDevice> aggregatedDeviceList = haivisionMediaPlatformCommunicator.retrieveMultipleStatistics();
+		Optional<AdvancedControllableProperty> advancedControllableProperty = aggregatedDeviceList.get(1).getControllableProperties().stream().filter(item ->
+				property.equals(item.getName())).findFirst();
+		Assert.assertEquals(value, advancedControllableProperty.get().getValue());
+	}
+
+	/**
+	 * Tests the application of change control for the Standby property of a specific device, ensuring the value is set successfully.
+	 *
+	 * @throws Exception if there's an error during the test process.
+	 */
+	@Test
+	void testStandbyControl() throws Exception {
+		haivisionMediaPlatformCommunicator.getMultipleStatistics();
+		haivisionMediaPlatformCommunicator.retrieveMultipleStatistics();
+		Thread.sleep(30000);
+		haivisionMediaPlatformCommunicator.retrieveMultipleStatistics();
+		ControllableProperty controllableProperty = new ControllableProperty();
+		String property = "Standby";
+		String value = "0";
+		String deviceId = "N8zfJJtMn_w9UfdteSpqIw";
+		controllableProperty.setProperty(property);
+		controllableProperty.setValue(value);
+		controllableProperty.setDeviceId(deviceId);
+		haivisionMediaPlatformCommunicator.controlProperty(controllableProperty);
+
+		List<AggregatedDevice> aggregatedDeviceList = haivisionMediaPlatformCommunicator.retrieveMultipleStatistics();
+		Thread.sleep(30000);
+		aggregatedDeviceList = haivisionMediaPlatformCommunicator.retrieveMultipleStatistics();
 		Optional<AdvancedControllableProperty> advancedControllableProperty = aggregatedDeviceList.get(1).getControllableProperties().stream().filter(item ->
 				property.equals(item.getName())).findFirst();
 		Assert.assertEquals(value, advancedControllableProperty.get().getValue());

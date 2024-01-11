@@ -15,9 +15,11 @@ public class HaivisionMediaPlatformConstant {
 	public static final String MODEL_MAPPING_AGGREGATED_DEVICE = "haivision/model-mapping.yml";
 	public static final String EMPTY = "";
 	public static final String NONE = "None";
+	public static final String NULL = "null";
 	public static final String OFF = "Off";
 	public static final String ON = "On";
 	public static final String TRUE = "true";
+	public static final String FALSE = "false";
 	public static final String NUMBER_ONE = "1";
 	public static final int PAGE_SIZE = 500;
 	public static final String ZERO = "0";
@@ -67,4 +69,5 @@ public class HaivisionMediaPlatformConstant {
 	public static final String OK = "ok";
 	public static final String CHANNEL_NAME = "channelName";
 	public static final String CHANNEL_TYPE = "channelType";
+	public static final String STATUS_DETAILS = "statusDetails";
 }

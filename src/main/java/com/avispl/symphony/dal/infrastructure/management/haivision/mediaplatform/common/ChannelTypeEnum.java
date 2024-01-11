@@ -12,10 +12,10 @@ package com.avispl.symphony.dal.infrastructure.management.haivision.mediaplatfor
  * @since 1.0.0
  */
 public enum ChannelTypeEnum {
-	PLAY_1000("Channel", "source"),
-	PLAY_2000_A("Videos", "asset"),
-	PLAY_2000_B("Sessions", "session"),
-	PLAY_4000("Layouts", "composition"),
+	CHANNEL("Channel", "source"),
+	VIDEOS("Videos", "asset"),
+	SESSIONS("Sessions", "session"),
+	LAYOUTS("Layouts", "composition"),
 	;
 	private final String name;
 	private final String value;
