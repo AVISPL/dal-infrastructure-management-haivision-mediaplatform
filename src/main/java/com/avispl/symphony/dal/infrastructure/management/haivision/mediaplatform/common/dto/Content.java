@@ -15,6 +15,7 @@ public class Content {
 	private String id;
 	private String name;
 	private String type;
+	private double length;
 
 	/**
 	 * Constructs a Content object with specified parameters.
@@ -22,11 +23,13 @@ public class Content {
 	 * @param id The unique identifier for the content.
 	 * @param name The name of the content.
 	 * @param type The type/category of the content.
+	 * @param length The length of the content.
 	 */
-	public Content(String id, String name, String type) {
+	public Content(String id, String name, String type, double length) {
 		this.id = id;
 		this.name = name;
 		this.type = type;
+		this.length = length;
 	}
 
 	/**
@@ -87,5 +90,23 @@ public class Content {
 	 */
 	public void setType(String type) {
 		this.type = type;
+	}
+
+	/**
+	 * Retrieves {@link #length}
+	 *
+	 * @return value of {@link #length}
+	 */
+	public double getLength() {
+		return length;
+	}
+
+	/**
+	 * Sets {@link #length} value
+	 *
+	 * @param length new value of {@link #length}
+	 */
+	public void setLength(double length) {
+		this.length = length;
 	}
 }

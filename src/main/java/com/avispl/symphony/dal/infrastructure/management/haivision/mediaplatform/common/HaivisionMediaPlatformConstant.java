@@ -15,9 +15,11 @@ public class HaivisionMediaPlatformConstant {
 	public static final String MODEL_MAPPING_AGGREGATED_DEVICE = "haivision/model-mapping.yml";
 	public static final String EMPTY = "";
 	public static final String NONE = "None";
+	public static final String NULL = "null";
 	public static final String OFF = "Off";
 	public static final String ON = "On";
 	public static final String TRUE = "true";
+	public static final String FALSE = "false";
 	public static final String NUMBER_ONE = "1";
 	public static final int PAGE_SIZE = 500;
 	public static final String ZERO = "0";
@@ -47,12 +49,14 @@ public class HaivisionMediaPlatformConstant {
 	public static final String COMPOSITION = "composition";
 	public static final String COMMAND = "command";
 	public static final String STATUS = "status";
+	public static final String LENGTH = "length";
 	public static final String CONTENT_GROUP = "Content#";
+	public static final String CONTROLS_GROUP = "Controls#";
 	public static final String VOLUME_CURRENT_VALUE = "VolumeCurrentValue(%)";
 	public static final String REBOOT = "Reboot";
 	public static final String REBOOTING = "Rebooting";
-	public static final String SAVE = "Save";
-	public static final String SAVING = "Saving";
+	public static final String APPLY = "Apply";
+	public static final String APPLYING = "Applying";
 	public static final String CANCEL = "Cancel";
 	public static final String CANCELING = "Canceling";
 	public static final String MUTE = "mute";
@@ -63,4 +67,7 @@ public class HaivisionMediaPlatformConstant {
 	public static final String SET_CHANNEL = "set-channel";
 	public static final String REBOOT_COMMAND = "reboot";
 	public static final String OK = "ok";
+	public static final String CHANNEL_NAME = "channelName";
+	public static final String CHANNEL_TYPE = "channelType";
+	public static final String STATUS_DETAILS = "statusDetails";
 }

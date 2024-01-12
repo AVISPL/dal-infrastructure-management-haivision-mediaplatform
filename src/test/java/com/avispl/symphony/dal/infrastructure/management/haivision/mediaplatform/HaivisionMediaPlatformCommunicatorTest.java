@@ -97,7 +97,7 @@ public class HaivisionMediaPlatformCommunicatorTest {
 	 */
 	@Test
 	void testAggregatorWithFilteringTagName() throws Exception {
-		haivisionMediaPlatformCommunicator.setFilterByTagName("H2");
+		haivisionMediaPlatformCommunicator.setFilterByTagName("H2, hff");
 		extendedStatistic = (ExtendedStatistics) haivisionMediaPlatformCommunicator.getMultipleStatistics().get(0);
 		Map<String, String> statistics = extendedStatistic.getStatistics();
 		List<AdvancedControllableProperty> advancedControllablePropertyList = extendedStatistic.getControllableProperties();
@@ -112,7 +112,8 @@ public class HaivisionMediaPlatformCommunicatorTest {
 	 */
 	@Test
 	void testAggregatorWithMultipleFilteringValue() throws Exception {
-		haivisionMediaPlatformCommunicator.setFilterByDeviceType("Play 2000A, Play 2000B");
+		haivisionMediaPlatformCommunicator.setFilterByDeviceType("Play 2000B, Play 2000A");
+		haivisionMediaPlatformCommunicator.setFilterByTagName("");
 		extendedStatistic = (ExtendedStatistics) haivisionMediaPlatformCommunicator.getMultipleStatistics().get(0);
 		Map<String, String> statistics = extendedStatistic.getStatistics();
 		List<AdvancedControllableProperty> advancedControllablePropertyList = extendedStatistic.getControllableProperties();
@@ -142,7 +143,7 @@ public class HaivisionMediaPlatformCommunicatorTest {
 	 */
 	@Test
 	void testGetMultipleStatisticsWithTagNameFilter() throws Exception {
-		haivisionMediaPlatformCommunicator.setFilterByTagName("  H2 ");
+		haivisionMediaPlatformCommunicator.setFilterByTagName("  H2 , h1");
 		haivisionMediaPlatformCommunicator.getMultipleStatistics();
 		haivisionMediaPlatformCommunicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
@@ -221,9 +222,9 @@ public class HaivisionMediaPlatformCommunicatorTest {
 		Thread.sleep(30000);
 		haivisionMediaPlatformCommunicator.retrieveMultipleStatistics();
 		ControllableProperty controllableProperty = new ControllableProperty();
-		String property = "Content#ApplyChange";
+		String property = "Content#CancelChanges";
 		String value = "1";
-		String deviceId = "yjdeqZ5k02-P3glODo4GvA";
+		String deviceId = "TCfg3p5HYOzrekyVISMYXg";
 		controllableProperty.setProperty(property);
 		controllableProperty.setValue(value);
 		controllableProperty.setDeviceId(deviceId);
@@ -247,9 +248,38 @@ public class HaivisionMediaPlatformCommunicatorTest {
 		Thread.sleep(30000);
 		haivisionMediaPlatformCommunicator.retrieveMultipleStatistics();
 		ControllableProperty controllableProperty = new ControllableProperty();
-		String property = "Volume(%)";
+		String property = "Controls#Volume(%)";
 		String value = "50.0";
-		String deviceId = "yjdeqZ5k02-P3glODo4GvA";
+		String deviceId = "TCfg3p5HYOzrekyVISMYXg";
+		controllableProperty.setProperty(property);
+		controllableProperty.setValue(value);
+		controllableProperty.setDeviceId(deviceId);
+		haivisionMediaPlatformCommunicator.controlProperty(controllableProperty);
+
+		List<AggregatedDevice> aggregatedDeviceList = haivisionMediaPlatformCommunicator.retrieveMultipleStatistics();
+		Thread.sleep(30000);
+		aggregatedDeviceList = haivisionMediaPlatformCommunicator.retrieveMultipleStatistics();
+
+		Optional<AdvancedControllableProperty> advancedControllableProperty = aggregatedDeviceList.get(1).getControllableProperties().stream().filter(item ->
+				property.equals(item.getName())).findFirst();
+		Assert.assertEquals(value, advancedControllableProperty.get().getValue());
+	}
+
+	/**
+	 * Tests the application of change control for the Mute property of a specific device, ensuring the value is set successfully.
+	 *
+	 * @throws Exception if there's an error during the test process.
+	 */
+	@Test
+	void testMuteControl() throws Exception {
+		haivisionMediaPlatformCommunicator.getMultipleStatistics();
+		haivisionMediaPlatformCommunicator.retrieveMultipleStatistics();
+		Thread.sleep(30000);
+		haivisionMediaPlatformCommunicator.retrieveMultipleStatistics();
+		ControllableProperty controllableProperty = new ControllableProperty();
+		String property = "Controls#Mute";
+		String value = "1";
+		String deviceId = "TCfg3p5HYOzrekyVISMYXg";
 		controllableProperty.setProperty(property);
 		controllableProperty.setValue(value);
 		controllableProperty.setDeviceId(deviceId);
@@ -267,21 +297,23 @@ public class HaivisionMediaPlatformCommunicatorTest {
 	 * @throws Exception if there's an error during the test process.
 	 */
 	@Test
-	void testMuteControl() throws Exception {
+	void testStandbyControl() throws Exception {
 		haivisionMediaPlatformCommunicator.getMultipleStatistics();
 		haivisionMediaPlatformCommunicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
 		haivisionMediaPlatformCommunicator.retrieveMultipleStatistics();
 		ControllableProperty controllableProperty = new ControllableProperty();
 		String property = "Standby";
-		String value = "1";
-		String deviceId = "yjdeqZ5k02-P3glODo4GvA";
+		String value = "0";
+		String deviceId = "N8zfJJtMn_w9UfdteSpqIw";
 		controllableProperty.setProperty(property);
 		controllableProperty.setValue(value);
 		controllableProperty.setDeviceId(deviceId);
 		haivisionMediaPlatformCommunicator.controlProperty(controllableProperty);
 
 		List<AggregatedDevice> aggregatedDeviceList = haivisionMediaPlatformCommunicator.retrieveMultipleStatistics();
+		Thread.sleep(30000);
+		aggregatedDeviceList = haivisionMediaPlatformCommunicator.retrieveMultipleStatistics();
 		Optional<AdvancedControllableProperty> advancedControllableProperty = aggregatedDeviceList.get(1).getControllableProperties().stream().filter(item ->
 				property.equals(item.getName())).findFirst();
 		Assert.assertEquals(value, advancedControllableProperty.get().getValue());
