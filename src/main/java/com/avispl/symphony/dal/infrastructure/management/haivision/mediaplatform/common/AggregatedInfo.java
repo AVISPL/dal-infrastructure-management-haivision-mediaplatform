@@ -28,7 +28,7 @@ public enum AggregatedInfo {
 	TAGS("Tags"),
 	MUTE("Mute"),
 	REBOOT("Reboot"),
-	STANDBY("Standby"),
+	POWER("Power"),
 	VOLUME("Volume(%)"),
 	STATUS("Status"),
 	APPLY_CHANGES("ApplyChanges"),
