@@ -467,15 +467,15 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 						body.put(HaivisionMediaPlatformConstant.COMMAND, commandValue);
 						sendSTBCommandToDevice(deviceId, body, propertyName, getSwitchStatus(value));
 						break;
-					case STANDBY:
+					case POWER:
 						commandValue = HaivisionMediaPlatformConstant.STANDBY_OFF;
-						if (HaivisionMediaPlatformConstant.NUMBER_ONE.equals(value)) {
+						if (HaivisionMediaPlatformConstant.ZERO.equals(value)) {
 							commandValue = HaivisionMediaPlatformConstant.STANDBY_ON;
 						}
 						body.put(HaivisionMediaPlatformConstant.COMMAND, commandValue);
 						sendSTBCommandToDevice(deviceId, body, propertyName, getSwitchStatus(value));
 						JsonNode response = checkChangedDataAfterControl(deviceId, "standby",
-								HaivisionMediaPlatformConstant.NUMBER_ONE.equals(value) ? HaivisionMediaPlatformConstant.TRUE : HaivisionMediaPlatformConstant.FALSE);
+								HaivisionMediaPlatformConstant.ZERO.equals(value) ? HaivisionMediaPlatformConstant.TRUE : HaivisionMediaPlatformConstant.FALSE);
 
 						List<String> arrayValues = Arrays.stream(ChannelTypeEnum.values()).map(ChannelTypeEnum::getName).collect(Collectors.toList());
 						arrayValues.add(0, HaivisionMediaPlatformConstant.NONE);
@@ -489,7 +489,7 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 							populateForContentGroup(stats, advancedControllableProperties, type, name);
 							checkNextPollingAfterControl = false;
 						} else {
-							if (HaivisionMediaPlatformConstant.NUMBER_ONE.equals(value)) {
+							if (HaivisionMediaPlatformConstant.ZERO.equals(value)) {
 								stats.put(AggregatedInfo.STATUS.getName(), "Standby");
 								if (!stats.get(HaivisionMediaPlatformConstant.CONTENT_GROUP + AggregatedInfo.CONTENT_TYPE.getName()).equals(ChannelTypeEnum.LAYOUTS.getValue())
 										&& !stats.get(HaivisionMediaPlatformConstant.CONTENT_GROUP + AggregatedInfo.CONTENT_TYPE.getName()).equals(ChannelTypeEnum.LAYOUTS.getName())) {
@@ -569,7 +569,7 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 							body.set(HaivisionMediaPlatformConstant.PARAMETERS, childNode);
 
 							JsonNode currentValue = null;
-							if (HaivisionMediaPlatformConstant.NUMBER_ONE.equals(stats.get(AggregatedInfo.STANDBY.getName()))) {
+							if (HaivisionMediaPlatformConstant.ZERO.equals(stats.get(AggregatedInfo.POWER.getName()))) {
 								currentValue = this.doGet(String.format(HaivisionMediaPlatformCommand.GET_DEVICE_INFO_COMMAND, deviceId), JsonNode.class);
 							}
 							//Send command
@@ -577,7 +577,7 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 
 							arrayValues = Arrays.stream(ChannelTypeEnum.values()).map(ChannelTypeEnum::getName).collect(Collectors.toList());
 							arrayValues.add(0, HaivisionMediaPlatformConstant.NONE);
-							if (HaivisionMediaPlatformConstant.NUMBER_ONE.equals(stats.get(AggregatedInfo.STANDBY.getName())) && !type.equals(ChannelTypeEnum.LAYOUTS.getValue())) {
+							if (HaivisionMediaPlatformConstant.ZERO.equals(stats.get(AggregatedInfo.POWER.getName())) && !type.equals(ChannelTypeEnum.LAYOUTS.getValue())) {
 								if (currentValue != null && currentValue.has(HaivisionMediaPlatformConstant.DATA) && ChannelTypeEnum.LAYOUTS.getValue()
 										.equals(currentValue.get(HaivisionMediaPlatformConstant.DATA).get(HaivisionMediaPlatformConstant.CHANNEL_TYPE).asText())) {
 									String currentType = currentValue.get(HaivisionMediaPlatformConstant.DATA).get(HaivisionMediaPlatformConstant.CHANNEL_TYPE).asText().trim();
@@ -1083,10 +1083,10 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 							createSwitch(HaivisionMediaPlatformConstant.CONTROLS_GROUP + propertyName, HaivisionMediaPlatformConstant.TRUE.equals(value) ? 1 : 0, HaivisionMediaPlatformConstant.OFF,
 									HaivisionMediaPlatformConstant.ON), value);
 					break;
-				case STANDBY:
+				case POWER:
 					addAdvancedControlProperties(advancedControllableProperties, stats,
-							createSwitch(propertyName, HaivisionMediaPlatformConstant.TRUE.equals(value) ? 1 : 0, HaivisionMediaPlatformConstant.OFF, HaivisionMediaPlatformConstant.ON),
-							HaivisionMediaPlatformConstant.TRUE.equals(value) ? "1" : "0");
+							createSwitch(propertyName, HaivisionMediaPlatformConstant.TRUE.equals(value) ? 0 : 1, HaivisionMediaPlatformConstant.OFF, HaivisionMediaPlatformConstant.ON),
+							HaivisionMediaPlatformConstant.TRUE.equals(value) ? "0" : "1");
 					break;
 				case LAST_CONNECT_AT:
 					stats.put(propertyName, convertMillisecondsToDate(value));
