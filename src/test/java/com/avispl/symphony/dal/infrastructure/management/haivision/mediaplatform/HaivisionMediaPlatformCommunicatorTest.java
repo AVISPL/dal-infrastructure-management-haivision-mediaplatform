@@ -97,7 +97,7 @@ public class HaivisionMediaPlatformCommunicatorTest {
 	 */
 	@Test
 	void testAggregatorWithFilteringTagName() throws Exception {
-		haivisionMediaPlatformCommunicator.setFilterByTagName("H2, hff");
+		haivisionMediaPlatformCommunicator.setFilterByTagName("H2, H1");
 		extendedStatistic = (ExtendedStatistics) haivisionMediaPlatformCommunicator.getMultipleStatistics().get(0);
 		Map<String, String> statistics = extendedStatistic.getStatistics();
 		List<AdvancedControllableProperty> advancedControllablePropertyList = extendedStatistic.getControllableProperties();
@@ -143,7 +143,7 @@ public class HaivisionMediaPlatformCommunicatorTest {
 	 */
 	@Test
 	void testGetMultipleStatisticsWithTagNameFilter() throws Exception {
-		haivisionMediaPlatformCommunicator.setFilterByTagName("  H2 , h1");
+		haivisionMediaPlatformCommunicator.setFilterByTagName("  H2 , H1");
 		haivisionMediaPlatformCommunicator.getMultipleStatistics();
 		haivisionMediaPlatformCommunicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
