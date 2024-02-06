@@ -15,9 +15,9 @@ jobs:
       ver: ${{ steps.pversion.outputs.ver }}
       date: ${{ steps.date.outputs.date }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up JDK 1.8 & run tests & generate artifacts
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: adopt
           java-version: 8
