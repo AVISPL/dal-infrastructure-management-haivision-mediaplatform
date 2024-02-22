@@ -1,0 +1,26 @@
+models:
+  - model:
+      name: Generic
+      vendor: HaivisionMediaPlatform
+      filter: true
+      mapping:
+        deviceId: get("_id")
+        deviceModel: get("type")
+        deviceOnline: get("status").asText().equalsIgnoreCase("Online") || get("status").asText().equalsIgnoreCase("Standby")
+        deviceName: get("name")
+      properties:
+        Firmware: get("firmware")
+        MACAddress: get("mac")
+        IPAddress: get("ip")
+        LastConnectedAt: get("lastConnectedAt")
+        Hostname: get("hostname")
+        Source: get("channelName")
+        ContentType: get("channelType")
+        Tags: get("tags")
+        Mute: get("muted")
+        Power: get("standby")
+        Volume(%): get("volume")
+        Status: get("status")
+        NTPServer: get("ntpServer")
+        Extension: get("hvExtensionSize")
+        StatusDetails: get("statusDetails")
