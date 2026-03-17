@@ -62,7 +62,7 @@ public enum AggregatedInfo {
 	 * @throws IllegalStateException if no constant with the specified name is found
 	 */
 	public static AggregatedInfo getByName(String name) {
-		Optional<AggregatedInfo> property = Arrays.stream(AggregatedInfo.values()).filter(group -> group.getName().equals(name)).findFirst();
+		Optional<AggregatedInfo> property = Arrays.stream(values()).filter(group -> group.getName().equals(name)).findFirst();
 		if (property.isPresent()) {
 			return property.get();
 		} else {
