@@ -13,8 +13,7 @@ package com.avispl.symphony.dal.infrastructure.management.haivision.mediaplatfor
  */
 public enum SystemInfo {
 	VERSION("Version", "version"),
-	BUILD("Build", "build"),
-	NUMBER_OF_DEVICES("NumberOfDevices", "numResults"),
+	BUILD("Build", "build")
 	;
 	private final String name;
 	private final String value;
