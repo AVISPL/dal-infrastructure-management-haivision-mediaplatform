@@ -764,7 +764,8 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 				token = response.get(HaivisionMediaPlatformConstant.DATA).get(HaivisionMediaPlatformConstant.SESSION_ID).asText();
 			}
 		} catch (Exception e) {
-			throw new FailedLoginException("Failed to retrieve the cookie for account with from username and password");
+			logger.error("Failed to retrieve the cookie for account: " + e.getMessage());
+			throw new FailedLoginException("Failed to retrieve the cookie for account with provided username and password.");
 		}
 		return token;
 	}
