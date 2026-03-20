@@ -726,6 +726,7 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 	@Override
 	protected HttpHeaders putExtraRequestHeaders(HttpMethod httpMethod, String uri, HttpHeaders headers) {
 		headers.set("Cookie", "calypso-session-id=" + cookieSession);
+		headers.set("Host", getHost());
 		return headers;
 	}
 
