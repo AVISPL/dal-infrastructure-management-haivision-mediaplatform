@@ -5,10 +5,6 @@
 package com.avispl.symphony.dal.infrastructure.management.haivision.mediaplatform;
 
 import java.io.IOException;
-import java.net.ConnectException;
-import java.net.Socket;
-import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -18,6 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -48,6 +45,7 @@ import com.avispl.symphony.dal.aggregator.parser.AggregatedDeviceProcessor;
 import com.avispl.symphony.dal.aggregator.parser.PropertiesMapping;
 import com.avispl.symphony.dal.aggregator.parser.PropertiesMappingParser;
 import com.avispl.symphony.dal.communicator.RestCommunicator;
+import com.avispl.symphony.dal.infrastructure.management.haivision.mediaplatform.common.AdapterMetadataInfo;
 import com.avispl.symphony.dal.infrastructure.management.haivision.mediaplatform.common.AggregatedInfo;
 import com.avispl.symphony.dal.infrastructure.management.haivision.mediaplatform.common.ChannelTypeEnum;
 import com.avispl.symphony.dal.infrastructure.management.haivision.mediaplatform.common.EnumTypeHandler;
@@ -129,7 +127,7 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 				try {
 					TimeUnit.MILLISECONDS.sleep(500);
 				} catch (InterruptedException e) {
-					// Ignore for now
+					logger.info(String.format("Sleep for 0.5 second was interrupted with error message: %s", e.getMessage()), e);
 				}
 
 				if (!inProgress) {
@@ -144,17 +142,18 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 				if (logger.isDebugEnabled()) {
 					logger.debug("Fetching other than aggregated device list");
 				}
-				long currentTimestamp = System.currentTimeMillis();
-				if (!flag && nextDevicesCollectionIterationTimestamp <= currentTimestamp) {
+				long startCycle = System.currentTimeMillis();
+				if (!flag && nextDevicesCollectionIterationTimestamp <= startCycle) {
 					populateDeviceDetails();
 					flag = true;
 				}
+				lastMonitoringCycleDuration = Math.max((System.currentTimeMillis() - startCycle) / 1000, 1L);
 
 				while (nextDevicesCollectionIterationTimestamp > System.currentTimeMillis()) {
 					try {
 						TimeUnit.MILLISECONDS.sleep(1000);
 					} catch (InterruptedException e) {
-						//
+						logger.info(String.format("Sleep for 0.5 second was interrupted with error message: %s", e.getMessage()));
 					}
 				}
 
@@ -162,7 +161,12 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 					break loop;
 				}
 				if (flag) {
-					nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + 30000;
+					try {
+						nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + (getMonitoringRate() * 60000L);
+					} catch (NoSuchMethodError error) {
+						nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + 60000L;
+						logger.error("Unsupported feature: getMonitoringRate isn't available on current Cloud Connector version.", error);
+					}
 					flag = false;
 				}
 
@@ -192,6 +196,14 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 	 * locks on the same shared resource by the same thread.
 	 */
 	private final ReentrantLock reentrantLock = new ReentrantLock();
+
+	/** Application configuration loaded from {@code version.properties}. */
+	private final Properties versionProperties = new Properties();
+
+	/** Device adapter instantiation timestamp. */
+	private final long adapterInitializationTimestamp = System.currentTimeMillis();
+
+	private long lastMonitoringCycleDuration = 1L;
 
 	/**
 	 * A mapper for reading and writing JSON using Jackson library.
@@ -253,7 +265,7 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 	/**
 	 * List of aggregated device
 	 */
-	private List<AggregatedDevice> aggregatedDeviceList = Collections.synchronizedList(new ArrayList<>());
+	private final List<AggregatedDevice> aggregatedDeviceList = Collections.synchronizedList(new ArrayList<>());
 
 	/**
 	 * List of content value
@@ -367,52 +379,6 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 
 	/**
 	 * {@inheritDoc}
-	 * <p>
-	 *
-	 * Check for available devices before retrieving the value
-	 * ping latency information to Symphony
-	 */
-	@Override
-	public int ping() throws Exception {
-		if (isInitialized()) {
-			long pingResultTotal = 0L;
-
-			for (int i = 0; i < this.getPingAttempts(); i++) {
-				long startTime = System.currentTimeMillis();
-
-				try (Socket puSocketConnection = new Socket(this.host, this.getPort())) {
-					puSocketConnection.setSoTimeout(this.getPingTimeout());
-					if (puSocketConnection.isConnected()) {
-						long pingResult = System.currentTimeMillis() - startTime;
-						pingResultTotal += pingResult;
-						if (this.logger.isTraceEnabled()) {
-							this.logger.trace(String.format("PING OK: Attempt #%s to connect to %s on port %s succeeded in %s ms", i + 1, host, this.getPort(), pingResult));
-						}
-					} else {
-						if (this.logger.isDebugEnabled()) {
-							logger.debug(String.format("PING DISCONNECTED: Connection to %s did not succeed within the timeout period of %sms", host, this.getPingTimeout()));
-						}
-						return this.getPingTimeout();
-					}
-				} catch (SocketTimeoutException | ConnectException tex) {
-					throw new SocketTimeoutException("Socket connection timed out");
-				} catch (UnknownHostException tex) {
-					throw new SocketTimeoutException("Socket connection timed out" + tex.getMessage());
-				} catch (Exception e) {
-					if (this.logger.isWarnEnabled()) {
-						this.logger.warn(String.format("PING TIMEOUT: Connection to %s did not succeed, UNKNOWN ERROR %s: ", host, e.getMessage()));
-					}
-					return this.getPingTimeout();
-				}
-			}
-			return Math.max(1, Math.toIntExact(pingResultTotal / this.getPingAttempts()));
-		} else {
-			throw new IllegalStateException("Cannot use device class without calling init() first");
-		}
-	}
-
-	/**
-	 * {@inheritDoc}
 	 */
 	@Override
 	public List<Statistics> getMultipleStatistics() throws Exception {
@@ -422,11 +388,14 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 				throw new FailedLoginException("Please enter valid password and username field.");
 			}
 			Map<String, String> statistics = new HashMap<>();
+			Map<String, String> dynamicStatistics = new HashMap<>();
 			ExtendedStatistics extendedStatistics = new ExtendedStatistics();
 			getContentValue();
 			retrieveDeviceInformationByPage(1);
 			retrieveAndPopulateSystemInfo(statistics);
+			populateAdapterMetadata(statistics, dynamicStatistics);
 			extendedStatistics.setStatistics(statistics);
+			extendedStatistics.setDynamicStatistics(dynamicStatistics);
 			localExtendedStatistics = extendedStatistics;
 		} finally {
 			reentrantLock.unlock();
@@ -712,6 +681,11 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 		if (logger.isDebugEnabled()) {
 			logger.debug("Internal init is called.");
 		}
+		try {
+			this.versionProperties.load(this.getClass().getResourceAsStream("/version.properties"));
+		} catch (IOException e) {
+			this.logger.error("Failed to load version properties file.", e);
+		}
 		executorService = Executors.newFixedThreadPool(1);
 		executorService.submit(deviceDataLoader = new HaivisionDataLoader());
 		super.internalInit();
@@ -741,6 +715,7 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 		nextDevicesCollectionIterationTimestamp = 0;
 		cachedAggregatedDeviceList.clear();
 		aggregatedDeviceList.clear();
+		this.versionProperties.clear();
 		super.internalDestroy();
 	}
 
@@ -751,6 +726,7 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 	@Override
 	protected HttpHeaders putExtraRequestHeaders(HttpMethod httpMethod, String uri, HttpHeaders headers) {
 		headers.set("Cookie", "calypso-session-id=" + cookieSession);
+		headers.set("Host", getHost());
 		return headers;
 	}
 
@@ -789,9 +765,32 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 				token = response.get(HaivisionMediaPlatformConstant.DATA).get(HaivisionMediaPlatformConstant.SESSION_ID).asText();
 			}
 		} catch (Exception e) {
-			throw new FailedLoginException("Failed to retrieve the cookie for account with from username and password");
+			logger.error("Failed to retrieve the cookie for account: " + e.getMessage());
+			throw new FailedLoginException("Failed to retrieve the cookie for account with provided username and password.");
 		}
 		return token;
+	}
+
+	/**
+	 * Retrieves adapter metadata and populates the provided statistics and dynamic statistics.
+	 *
+	 * @param statistics the statistics map
+	 * @param dynamicStatistics the dynamic statistics map
+	 */
+	private void populateAdapterMetadata(Map<String, String> statistics, Map<String, String> dynamicStatistics) {
+		long adapterUptime = System.currentTimeMillis() - adapterInitializationTimestamp;
+
+		statistics.put(AdapterMetadataInfo.ADAPTER_BUILD_DATE.getName(), this.versionProperties.getProperty("adapter.build.date"));
+		statistics.put(AdapterMetadataInfo.ADAPTER_UPTIME.getName(), this.normalizeUptime(adapterUptime / 1000));
+		statistics.put(AdapterMetadataInfo.ADAPTER_UPTIME_MIN.getName(), String.valueOf(adapterUptime / (1000 * 60)));
+		statistics.put(AdapterMetadataInfo.ADAPTER_VERSION.getName(), this.versionProperties.getProperty("adapter.version"));
+		try {
+			statistics.put(AdapterMetadataInfo.MONITORED_CYCLE_INTERVAL.getName(), String.valueOf(this.getMonitoringRate()));
+		} catch (NoSuchMethodError error) {
+			logger.warn("Unsupported feature: getMonitoringRate isn't available on current Cloud Connector version.", error);
+		}
+		dynamicStatistics.put(AdapterMetadataInfo.LAST_MONITORING_CYCLE_DURATION.getName(), String.valueOf(this.lastMonitoringCycleDuration));
+		dynamicStatistics.put(AdapterMetadataInfo.MONITORED_DEVICES_TOTAL.getName(), String.valueOf(this.cachedAggregatedDeviceList.size()));
 	}
 
 	/**
@@ -806,25 +805,14 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 				String propertyName = systemInfo.getName();
 				String value = systemInfo.getValue();
 				switch (systemInfo) {
-					case VERSION:
-					case BUILD:
+					case VERSION, BUILD -> {
 						if (buildVersionResponse != null && buildVersionResponse.has(HaivisionMediaPlatformConstant.DATA)) {
 							stats.put(propertyName, buildVersionResponse.get(HaivisionMediaPlatformConstant.DATA).get(value).asText());
 						} else {
 							stats.put(propertyName, HaivisionMediaPlatformConstant.NONE);
 						}
-						break;
-					case NUMBER_OF_DEVICES:
-						if (aggregatorResponse != null && aggregatorResponse.has(HaivisionMediaPlatformConstant.PAGING)) {
-							stats.put(propertyName, aggregatorResponse.get(HaivisionMediaPlatformConstant.PAGING).get(value).asText());
-						}
-						if (aggregatorResponse == null || aggregatorResponse.has(HaivisionMediaPlatformConstant.HTTP_STATUS_CODE)
-								&& aggregatorResponse.get(HaivisionMediaPlatformConstant.HTTP_STATUS_CODE).asInt() == 404) {
-							stats.put(propertyName, HaivisionMediaPlatformConstant.ZERO);
-						}
-						break;
-					default:
-						stats.put(propertyName, HaivisionMediaPlatformConstant.NONE);
+					}
+					default -> stats.put(propertyName, HaivisionMediaPlatformConstant.NONE);
 				}
 			}
 		} catch (Exception e) {
@@ -1452,5 +1440,36 @@ public class HaivisionMediaPlatformCommunicator extends RestCommunicator impleme
 	private void removeValueForTheControllableProperty(Map<String, String> stats, List<AdvancedControllableProperty> advancedControllableProperties, String name) {
 		stats.remove(name);
 		advancedControllableProperties.removeIf(item -> item.getName().equalsIgnoreCase(name));
+	}
+
+	/**
+	 * Uptime is received in seconds, need to normalize it and make it human-readable, like 1 d 5 hr 12 min 55 sec.
+	 * Incoming parameter is may have a decimal point, so in order to safely process this - it's rounded first.
+	 * We don't need to add a segment of time if it's 0.
+	 *
+	 * @param uptimeSeconds value in seconds
+	 * @return string value of format 'x d x hr x min x sec'
+	 */
+	private String normalizeUptime(long uptimeSeconds) {
+		StringBuilder normalizedUptime = new StringBuilder();
+
+		long seconds = uptimeSeconds % 60;
+		long minutes = uptimeSeconds % 3600 / 60;
+		long hours = uptimeSeconds % 86400 / 3600;
+		long days = uptimeSeconds / 86400;
+
+		if (days > 0) {
+			normalizedUptime.append(days).append(" d ");
+		}
+		if (hours > 0) {
+			normalizedUptime.append(hours).append(" hr ");
+		}
+		if (minutes > 0) {
+			normalizedUptime.append(minutes).append(" min ");
+		}
+		if (seconds > 0 || normalizedUptime.isEmpty()) {
+			normalizedUptime.append(seconds).append(" sec");
+		}
+		return normalizedUptime.toString().trim();
 	}
 }
